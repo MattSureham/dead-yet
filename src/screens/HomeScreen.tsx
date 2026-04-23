@@ -76,7 +76,7 @@ export default function HomeScreen({ navigation }: Props) {
         </TouchableOpacity>
         <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('DeathNote')}>
           <Text style={styles.menuIcon}>📝</Text>
-          <Text style={styles.menuText}>Death Notes</Text>
+          <Text style={styles.menuText}>Final Wishes & Instructions</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('Settings')}>
           <Text style={styles.menuIcon}>⚙️</Text>

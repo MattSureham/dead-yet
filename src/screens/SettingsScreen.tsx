@@ -22,7 +22,7 @@ export default function SettingsScreen({ navigation }: Props) {
   const handleClearData = () => {
     Alert.alert(
       'Delete All Data',
-      'This will permanently delete all your data including emergency contacts and death notes. This cannot be undone.',
+      'This will permanently delete all your data including emergency contacts and Final Wishes & Instructions. This cannot be undone.',
       [
         { text: 'Cancel', style: 'cancel' },
         {

@@ -39,7 +39,7 @@ export default function AppNavigator() {
         <Stack.Screen
           name="Home"
           component={HomeScreen}
-          options={{ title: 'Dead Yet', headerShown: false }}
+          options={{ title: 'Dead Yet?', headerShown: false }}
         />
         <Stack.Screen
           name="Activity"
@@ -54,7 +54,7 @@ export default function AppNavigator() {
         <Stack.Screen
           name="DeathNote"
           component={DeathNoteScreen}
-          options={{ title: 'Death Notes' }}
+          options={{ title: 'Final Wishes & Instructions' }}
         />
         <Stack.Screen
           name="Settings"
