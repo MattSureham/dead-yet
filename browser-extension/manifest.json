@@ -1,0 +1,14 @@
+{
+  "manifest_version": 3,
+  "name": "Dead Yet - History Clear",
+  "version": "1.0",
+  "description": "Clear your browser history when you're confirmed dead",
+  "permissions": ["history", "storage"],
+  "host_permissions": ["<all_urls>"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html"
+  }
+}

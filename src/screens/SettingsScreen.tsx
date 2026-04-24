@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, TextInput } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/types';
 import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from '../constants/theme';
@@ -12,11 +12,17 @@ type Props = {
 
 export default function SettingsScreen({ navigation }: Props) {
   const { profile, updateSettings } = useUser();
+  const [webhookUrl, setWebhookUrl] = useState(profile?.settings?.historyClearWebhook || '');
 
   const handleToggleNotifications = async () => {
     if (profile) {
       await updateSettings({ notificationsEnabled: !profile.settings.notificationsEnabled });
     }
+  };
+
+  const handleSaveWebhook = async () => {
+    await updateSettings({ historyClearWebhook: webhookUrl.trim() });
+    Alert.alert('Saved', 'History clear webhook URL saved.');
   };
 
   const handleClearData = () => {
@@ -54,7 +60,7 @@ export default function SettingsScreen({ navigation }: Props) {
             <Text style={styles.itemSubtitle}>Receive check-in reminders and alerts</Text>
           </View>
           <View style={[styles.toggle, profile?.settings.notificationsEnabled && styles.toggleOn]}>
-            <View style={[styles.toggleKnob, profile?.settings.notificationsEnabled && styles.toggleKnobOn]} />
+            <View style={[styles.toggleKnob, profile?.settings.notificationsEnabled && styles.toggleOn]} />
           </View>
         </TouchableOpacity>
       </View>
@@ -69,6 +75,26 @@ export default function SettingsScreen({ navigation }: Props) {
           <Text style={styles.itemTitle}>Confirmation Timeout</Text>
           <Text style={styles.itemValue}>{profile?.settings.confirmationTimeoutHours || 24} hours</Text>
         </View>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Browser History Clearing</Text>
+        <Text style={styles.sectionSubtitle}>
+          When you're confirmed dead, this webhook is called to clear your browser history. Requires the "Dead Yet" browser extension.
+        </Text>
+        <TextInput
+          style={styles.input}
+          placeholder="https://your-webhook-url.com/clear"
+          placeholderTextColor={COLORS.textMuted}
+          value={webhookUrl}
+          onChangeText={setWebhookUrl}
+          autoCapitalize="none"
+          autoCorrect={false}
+          keyboardType="url"
+        />
+        <TouchableOpacity style={styles.saveButton} onPress={handleSaveWebhook}>
+          <Text style={styles.saveButtonText}>Save Webhook URL</Text>
+        </TouchableOpacity>
       </View>
 
       <View style={styles.section}>
@@ -93,6 +119,7 @@ const styles = StyleSheet.create({
   title: { fontSize: FONT_SIZES.xxl, fontWeight: 'bold', color: COLORS.text },
   section: { marginBottom: SPACING.xl },
   sectionTitle: { fontSize: FONT_SIZES.sm, color: COLORS.textSecondary, marginBottom: SPACING.md, textTransform: 'uppercase', letterSpacing: 1 },
+  sectionSubtitle: { fontSize: FONT_SIZES.sm, color: COLORS.textMuted, marginBottom: SPACING.md },
   toggleItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: COLORS.surface, borderRadius: BORDER_RADIUS.lg, padding: SPACING.md },
   itemTitle: { color: COLORS.text, fontSize: FONT_SIZES.md },
   itemSubtitle: { color: COLORS.textSecondary, fontSize: FONT_SIZES.sm, marginTop: 2 },
@@ -102,6 +129,9 @@ const styles = StyleSheet.create({
   toggleKnob: { width: 26, height: 26, borderRadius: 13, backgroundColor: COLORS.text, alignSelf: 'flex-start' },
   toggleKnobOn: { alignSelf: 'flex-end' },
   infoItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: COLORS.surface, borderRadius: BORDER_RADIUS.lg, padding: SPACING.md, marginBottom: SPACING.sm },
+  input: { backgroundColor: COLORS.surface, borderRadius: BORDER_RADIUS.lg, padding: SPACING.md, fontSize: FONT_SIZES.md, color: COLORS.text, borderWidth: 1, borderColor: COLORS.border, marginBottom: SPACING.md },
+  saveButton: { backgroundColor: COLORS.primary, borderRadius: BORDER_RADIUS.lg, padding: SPACING.md, alignItems: 'center' },
+  saveButtonText: { color: COLORS.text, fontSize: FONT_SIZES.md, fontWeight: '600' },
   dangerItem: { backgroundColor: COLORS.surface, borderRadius: BORDER_RADIUS.lg, padding: SPACING.md, alignItems: 'center' },
   dangerText: { color: COLORS.danger, fontSize: FONT_SIZES.md },
   footer: { alignItems: 'center', padding: SPACING.xl },

@@ -49,6 +49,7 @@ export interface UserSettings {
   confirmationTimeoutHours: number;
   notificationsEnabled: boolean;
   pinHash?: string;
+  historyClearWebhook?: string;
 }
 
 export interface UserProfile {

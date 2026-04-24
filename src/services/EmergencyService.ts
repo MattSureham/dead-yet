@@ -89,6 +89,29 @@ class EmergencyService {
   async getAllContacts(): Promise<EmergencyContact[]> {
     return await storageService.getEmergencyContacts();
   }
+
+  async triggerHistoryClear(): Promise<boolean> {
+    const profile = await storageService.getUserProfile();
+    const webhookUrl = profile?.settings?.historyClearWebhook;
+
+    if (!webhookUrl) {
+      console.log('No history clear webhook configured');
+      return false;
+    }
+
+    try {
+      console.log(`Triggering history clear via webhook: ${webhookUrl}`);
+      await fetch(webhookUrl, {
+        method: 'GET',
+        mode: 'no-cors',
+      });
+      console.log('History clear webhook called successfully');
+      return true;
+    } catch (error) {
+      console.error('Failed to call history clear webhook:', error);
+      return false;
+    }
+  }
 }
 
 export const emergencyService = EmergencyService.getInstance();
