@@ -79,7 +79,7 @@ export default function DeathNoteScreen({ navigation }: Props) {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.header}>
-        <Text style={styles.title}>Death Notes</Text>
+        <Text style={styles.title}>Final Wishes & Instructions</Text>
         <Text style={styles.subtitle}>
           Important information for those left behind
         </Text>
