@@ -1,11 +1,12 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { STORAGE_KEYS } from '../constants/theme';
+import { UserProfile, EmergencyContact, DeathNote, ActivityLog } from '../models/types';
 
 class StorageService {
   async get<T>(key: string): Promise<T | null> {
     try {
       const value = await AsyncStorage.getItem(key);
-      return value ? JSON.parse(value) : null;
+      return value ? (JSON.parse(value) as T) : null;
     } catch (error) {
       console.error(`StorageService get error for key ${key}:`, error);
       return null;
@@ -45,37 +46,37 @@ class StorageService {
     }
   }
 
-  async getUserProfile(): Promise<any> {
-    return this.get(STORAGE_KEYS.USER_PROFILE);
+  async getUserProfile(): Promise<UserProfile | null> {
+    return this.get<UserProfile>(STORAGE_KEYS.USER_PROFILE);
   }
 
-  async setUserProfile(profile: any): Promise<boolean> {
+  async setUserProfile(profile: UserProfile): Promise<boolean> {
     return this.set(STORAGE_KEYS.USER_PROFILE, profile);
   }
 
-  async getEmergencyContacts(): Promise<any[]> {
-    const result = await this.get(STORAGE_KEYS.EMERGENCY_CONTACTS);
+  async getEmergencyContacts(): Promise<EmergencyContact[]> {
+    const result = await this.get<EmergencyContact[]>(STORAGE_KEYS.EMERGENCY_CONTACTS);
     return Array.isArray(result) ? result : [];
   }
 
-  async setEmergencyContacts(contacts: any[]): Promise<boolean> {
+  async setEmergencyContacts(contacts: EmergencyContact[]): Promise<boolean> {
     return this.set(STORAGE_KEYS.EMERGENCY_CONTACTS, contacts);
   }
 
-  async getDeathNote(): Promise<any> {
-    return this.get(STORAGE_KEYS.DEATH_NOTE);
+  async getDeathNote(): Promise<DeathNote | null> {
+    return this.get<DeathNote>(STORAGE_KEYS.DEATH_NOTE);
   }
 
-  async setDeathNote(note: any): Promise<boolean> {
+  async setDeathNote(note: DeathNote): Promise<boolean> {
     return this.set(STORAGE_KEYS.DEATH_NOTE, note);
   }
 
-  async getActivityLogs(): Promise<any[]> {
-    const result = await this.get(STORAGE_KEYS.ACTIVITY_LOGS);
+  async getActivityLogs(): Promise<ActivityLog[]> {
+    const result = await this.get<ActivityLog[]>(STORAGE_KEYS.ACTIVITY_LOGS);
     return Array.isArray(result) ? result : [];
   }
 
-  async setActivityLogs(logs: any[]): Promise<boolean> {
+  async setActivityLogs(logs: ActivityLog[]): Promise<boolean> {
     return this.set(STORAGE_KEYS.ACTIVITY_LOGS, logs);
   }
 

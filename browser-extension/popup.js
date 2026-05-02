@@ -31,8 +31,32 @@ saveBtn.addEventListener('click', () => {
   });
 });
 
+// Clear History Now button
+const clearNowBtn = document.getElementById('clearNowBtn');
+clearNowBtn.addEventListener('click', () => {
+  clearNowBtn.disabled = true;
+  clearNowBtn.textContent = 'Clearing...';
+
+  chrome.runtime.sendMessage({ action: 'clearHistory' }, (response) => {
+    clearNowBtn.disabled = false;
+    clearNowBtn.textContent = 'Clear History Now';
+
+    if (chrome.runtime.lastError) {
+      showStatus('Error: ' + chrome.runtime.lastError.message, 'error');
+    } else if (response && response.success) {
+      showStatus('Browser history cleared!', 'success');
+    } else {
+      showStatus('Failed to clear history', 'error');
+    }
+  });
+});
+
 function showStatus(message, type) {
   statusDiv.textContent = message;
   statusDiv.className = `status ${type}`;
   statusDiv.style.display = 'block';
+  // Auto-hide after 3 seconds
+  setTimeout(() => {
+    statusDiv.style.display = 'none';
+  }, 3000);
 }

@@ -60,7 +60,7 @@ export default function SettingsScreen({ navigation }: Props) {
             <Text style={styles.itemSubtitle}>Receive check-in reminders and alerts</Text>
           </View>
           <View style={[styles.toggle, profile?.settings.notificationsEnabled && styles.toggleOn]}>
-            <View style={[styles.toggleKnob, profile?.settings.notificationsEnabled && styles.toggleOn]} />
+            <View style={[styles.toggleKnob, profile?.settings.notificationsEnabled && styles.toggleKnobOn]} />
           </View>
         </TouchableOpacity>
       </View>

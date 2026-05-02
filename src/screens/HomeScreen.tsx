@@ -5,6 +5,7 @@ import { RootStackParamList } from '../navigation/types';
 import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from '../constants/theme';
 import { useUser } from '../contexts/UserContext';
 import { useActivity } from '../contexts/ActivityContext';
+import { formatDuration, daysBetween } from '../utils/format';
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Home'>;
@@ -22,19 +23,11 @@ export default function HomeScreen({ navigation }: Props) {
     if (!profile?.lastActivityAt) return 0;
     const last = new Date(profile.lastActivityAt);
     const now = new Date();
-    const diff = now.getTime() - last.getTime();
-    return Math.floor(diff / (1000 * 60 * 60 * 24));
+    return daysBetween(last, now);
   };
 
   const days = getDaysSinceActivity();
   const isAtRisk = days >= 2;
-
-  const formatTime = (minutes: number) => {
-    const hours = Math.floor(minutes / 60);
-    const mins = minutes % 60;
-    if (hours > 0) return `${hours}h ${mins}m`;
-    return `${mins}m`;
-  };
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -56,7 +49,7 @@ export default function HomeScreen({ navigation }: Props) {
           <Text style={styles.statLabel}>Days Silent</Text>
         </View>
         <View style={styles.statCard}>
-          <Text style={styles.statValue}>{formatTime(todayScreenTime)}</Text>
+          <Text style={styles.statValue}>{formatDuration(todayScreenTime)}</Text>
           <Text style={styles.statLabel}>Screen Time Today</Text>
         </View>
       </View>

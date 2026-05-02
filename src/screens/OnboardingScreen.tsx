@@ -16,6 +16,7 @@ import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from '../constants/theme';
 import { useUser } from '../contexts/UserContext';
 import { useContacts } from '../contexts/ContactsContext';
 import { notificationService } from '../services/NotificationService';
+import { hashPin } from '../utils/hash';
 import { v4 as uuidv4 } from 'uuid';
 
 type Props = {
@@ -44,6 +45,7 @@ export default function OnboardingScreen({ navigation }: Props) {
         return;
       }
       await notificationService.requestPermissions();
+      const pinHash = pin.length > 0 ? await hashPin(pin) : undefined;
       await updateProfile({
         id: uuidv4(),
         createdAt: new Date(),
@@ -54,7 +56,7 @@ export default function OnboardingScreen({ navigation }: Props) {
           inactivityThresholdDays: 3,
           confirmationTimeoutHours: 24,
           notificationsEnabled: true,
-          pinHash: pin,
+          pinHash,
         },
       });
       navigation.replace('Home');

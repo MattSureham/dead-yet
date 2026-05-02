@@ -4,6 +4,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/types';
 import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from '../constants/theme';
 import { useActivity } from '../contexts/ActivityContext';
+import { formatDuration } from '../utils/format';
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Activity'>;
@@ -16,13 +17,6 @@ export default function ActivityScreen({ navigation }: Props) {
     refresh();
   }, []);
 
-  const formatTime = (minutes: number) => {
-    const hours = Math.floor(minutes / 60);
-    const mins = minutes % 60;
-    if (hours > 0) return `${hours}h ${mins}m`;
-    return `${mins}m`;
-  };
-
   const maxWeekly = Math.max(...weeklyScreenTime, 1);
 
   return (
@@ -34,7 +28,7 @@ export default function ActivityScreen({ navigation }: Props) {
 
       <View style={styles.todayCard}>
         <Text style={styles.cardLabel}>Today's Screen Time</Text>
-        <Text style={styles.todayValue}>{formatTime(todayScreenTime)}</Text>
+        <Text style={styles.todayValue}>{formatDuration(todayScreenTime)}</Text>
         <TouchableOpacity style={styles.checkInButton} onPress={manualCheckIn}>
           <Text style={styles.checkInText}>✓ Manual Check-in</Text>
         </TouchableOpacity>
@@ -64,7 +58,7 @@ export default function ActivityScreen({ navigation }: Props) {
           appUsage.slice(0, 5).map((app, index) => (
             <View key={index} style={styles.appItem}>
               <Text style={styles.appName}>{app.appName}</Text>
-              <Text style={styles.appTime}>{formatTime(app.totalMinutes)}</Text>
+              <Text style={styles.appTime}>{formatDuration(app.totalMinutes)}</Text>
             </View>
           ))
         )}

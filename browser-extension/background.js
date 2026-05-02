@@ -53,5 +53,5 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   }
 });
 
-// Export for testing
-module.exports = { clearBrowserHistory };
+// NOTE: Service workers in Manifest V3 use ES module scope.
+// The clearBrowserHistory function is called via chrome.runtime.onMessage.
