@@ -6,6 +6,7 @@ import { ContactsProvider } from './src/contexts/ContactsContext';
 import { DeathNoteProvider } from './src/contexts/DeathNoteContext';
 import { ActivityProvider } from './src/contexts/ActivityContext';
 import { ErrorBoundary } from './src/components/ErrorBoundary';
+import { SecurityProvider } from './src/contexts/SecurityContext';
 import AppNavigator from './src/navigation/AppNavigator';
 import { storageService } from './src/services/StorageService';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
@@ -33,16 +34,18 @@ export default function App() {
   return (
     <ErrorBoundary>
       <SafeAreaProvider>
-        <UserProvider>
-          <ContactsProvider>
-            <DeathNoteProvider>
-              <ActivityProvider>
-                <StatusBar style="light" />
-                <AppNavigator />
-              </ActivityProvider>
-            </DeathNoteProvider>
-          </ContactsProvider>
-        </UserProvider>
+        <SecurityProvider>
+          <UserProvider>
+            <ContactsProvider>
+              <DeathNoteProvider>
+                <ActivityProvider>
+                  <StatusBar style="light" />
+                  <AppNavigator />
+                </ActivityProvider>
+              </DeathNoteProvider>
+            </ContactsProvider>
+          </UserProvider>
+        </SecurityProvider>
       </SafeAreaProvider>
     </ErrorBoundary>
   );
