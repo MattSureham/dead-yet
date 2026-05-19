@@ -1,5 +1,5 @@
-import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/types';
 import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from '../constants/theme';
@@ -12,8 +12,9 @@ type Props = {
 };
 
 export default function HomeScreen({ navigation }: Props) {
-  const { profile } = useUser();
+  const { profile, confirmAlive } = useUser();
   const { todayScreenTime, manualCheckIn, refresh } = useActivity();
+  const [isCheckingIn, setIsCheckingIn] = useState(false);
 
   useEffect(() => {
     refresh();
@@ -24,6 +25,25 @@ export default function HomeScreen({ navigation }: Props) {
     const last = new Date(profile.lastActivityAt);
     const now = new Date();
     return daysBetween(last, now);
+  };
+
+  /** Handle the "I'm Alive" tap with feedback. */
+  const handleCheckIn = async () => {
+    setIsCheckingIn(true);
+    try {
+      await manualCheckIn();
+      await confirmAlive();
+      Alert.alert(
+        '✓ Check-in recorded',
+        `You're confirmed alive as of ${new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}. We'll check again soon.`,
+        [{ text: 'OK' }],
+      );
+    } catch (err) {
+      console.error('[HomeScreen] Check-in error:', err);
+      Alert.alert('Error', 'Failed to record check-in. Please try again.');
+    } finally {
+      setIsCheckingIn(false);
+    }
   };
 
   const days = getDaysSinceActivity();
@@ -54,8 +74,14 @@ export default function HomeScreen({ navigation }: Props) {
         </View>
       </View>
 
-      <TouchableOpacity style={styles.checkInButton} onPress={manualCheckIn}>
-        <Text style={styles.checkInText}>✓ I'm Alive!</Text>
+      <TouchableOpacity
+        style={[styles.checkInButton, isCheckingIn && styles.checkInButtonDisabled]}
+        onPress={handleCheckIn}
+        disabled={isCheckingIn}
+      >
+        <Text style={styles.checkInText}>
+          {isCheckingIn ? 'Recording...' : '✓ I\'m Alive!'}
+        </Text>
       </TouchableOpacity>
 
       <View style={styles.menuContainer}>
@@ -138,6 +164,9 @@ const styles = StyleSheet.create({
     borderRadius: BORDER_RADIUS.lg,
     alignItems: 'center',
     marginBottom: SPACING.xl,
+  },
+  checkInButtonDisabled: {
+    opacity: 0.6,
   },
   checkInText: {
     fontSize: FONT_SIZES.lg,

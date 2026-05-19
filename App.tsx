@@ -7,6 +7,7 @@ import { DeathNoteProvider } from './src/contexts/DeathNoteContext';
 import { ActivityProvider } from './src/contexts/ActivityContext';
 import { ErrorBoundary } from './src/components/ErrorBoundary';
 import { SecurityProvider } from './src/contexts/SecurityContext';
+import SecurityGate from './src/components/SecurityGate';
 import AppNavigator from './src/navigation/AppNavigator';
 import { storageService } from './src/services/StorageService';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
@@ -14,11 +15,18 @@ import { COLORS } from './src/constants/theme';
 
 export default function App() {
   const [isReady, setIsReady] = useState(false);
+  const [isOnboardingComplete, setIsOnboardingComplete] = useState(false);
 
   useEffect(() => {
     async function initialize() {
-      await storageService.isOnboardingComplete();
-      setIsReady(true);
+      try {
+        const complete = await storageService.isOnboardingComplete();
+        setIsOnboardingComplete(complete);
+      } catch (err) {
+        console.error('[App] Init error:', err);
+      } finally {
+        setIsReady(true);
+      }
     }
     initialize();
   }, []);
@@ -35,16 +43,18 @@ export default function App() {
     <ErrorBoundary>
       <SafeAreaProvider>
         <SecurityProvider>
+          <SecurityGate>
           <UserProvider>
             <ContactsProvider>
               <DeathNoteProvider>
                 <ActivityProvider>
                   <StatusBar style="light" />
-                  <AppNavigator />
+                  <AppNavigator isOnboardingComplete={isOnboardingComplete} />
                 </ActivityProvider>
               </DeathNoteProvider>
             </ContactsProvider>
           </UserProvider>
+          </SecurityGate>
         </SecurityProvider>
       </SafeAreaProvider>
     </ErrorBoundary>

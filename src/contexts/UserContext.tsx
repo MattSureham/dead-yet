@@ -25,7 +25,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const loadProfile = async () => {
     const stored = await storageService.getUserProfile();
     if (stored) {
-      setProfile(stored as UserProfile);
+      setProfile(stored);
     }
     setIsLoading(false);
   };

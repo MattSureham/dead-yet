@@ -359,8 +359,8 @@ export function SecurityProvider({ children }: { children: ReactNode }) {
         profile.settings.pinHash = newHash;
         await storageService.setUserProfile(profile);
       } else {
-        // No profile yet — create a minimal one with just the pinHash
-        // The OnboardingScreen will overwrite this with the full profile
+        // No profile yet — create a minimal one with just the pinHash.
+        // The OnboardingScreen will flesh this out with the user's details.
         await storageService.setUserProfile({
           id: 'pending',
           createdAt: new Date(),
@@ -373,7 +373,7 @@ export function SecurityProvider({ children }: { children: ReactNode }) {
             notificationsEnabled: true,
             pinHash: newHash,
           },
-        } as any);
+        });
       }
 
       // Authenticate immediately after setup

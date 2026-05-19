@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -13,6 +13,7 @@ import { RootStackParamList } from '../navigation/types';
 import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from '../constants/theme';
 import { useContacts } from '../contexts/ContactsContext';
 import { EmergencyContact } from '../models/types';
+import { isValidPhoneNumber, isValidEmail } from '../utils/validation';
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'EmergencyContacts'>;
@@ -28,9 +29,33 @@ export default function EmergencyContactsScreen({ navigation }: Props) {
     relationship: '',
   });
 
+  /** Live validation feedback — memoised to prevent unnecessary recomputation. */
+  const validation = useMemo(() => ({
+    name: formData.name.trim() ? null : 'Name is required',
+    phone: formData.phoneNumber.trim()
+      ? (isValidPhoneNumber(formData.phoneNumber) ? null : 'Enter a valid phone number (7-15 digits)')
+      : 'Phone number is required',
+    email: formData.email.trim()
+      ? (isValidEmail(formData.email) ? null : 'Enter a valid email address')
+      : null,
+  }), [formData]);
+
   const handleAddContact = async () => {
-    if (!formData.name.trim() || !formData.phoneNumber.trim()) {
-      Alert.alert('Error', 'Name and phone number are required');
+    // Validate all required fields
+    if (!formData.name.trim()) {
+      Alert.alert('Missing field', 'Please enter a name for the contact.');
+      return;
+    }
+    if (!formData.phoneNumber.trim()) {
+      Alert.alert('Missing field', 'Please enter a phone number.');
+      return;
+    }
+    if (!isValidPhoneNumber(formData.phoneNumber.trim())) {
+      Alert.alert('Invalid phone', 'Please enter a valid phone number with 7-15 digits.');
+      return;
+    }
+    if (formData.email.trim() && !isValidEmail(formData.email.trim())) {
+      Alert.alert('Invalid email', 'Please enter a valid email address or leave it blank.');
       return;
     }
 
@@ -93,29 +118,36 @@ export default function EmergencyContactsScreen({ navigation }: Props) {
       {showAddForm ? (
         <View style={styles.addForm}>
           <Text style={styles.formTitle}>Add Contact</Text>
+
           <TextInput
-            style={styles.input}
+            style={[styles.input, validation.name && styles.inputError]}
             placeholder="Name *"
             placeholderTextColor={COLORS.textMuted}
             value={formData.name}
             onChangeText={(text) => setFormData({ ...formData, name: text })}
           />
+          {validation.name && <Text style={styles.errorText}>{validation.name}</Text>}
+
           <TextInput
-            style={styles.input}
+            style={[styles.input, validation.phone && styles.inputError]}
             placeholder="Phone Number *"
             placeholderTextColor={COLORS.textMuted}
             value={formData.phoneNumber}
             onChangeText={(text) => setFormData({ ...formData, phoneNumber: text })}
             keyboardType="phone-pad"
           />
+          {validation.phone && <Text style={styles.errorText}>{validation.phone}</Text>}
+
           <TextInput
-            style={styles.input}
+            style={[styles.input, validation.email && styles.inputError]}
             placeholder="Email"
             placeholderTextColor={COLORS.textMuted}
             value={formData.email}
             onChangeText={(text) => setFormData({ ...formData, email: text })}
             keyboardType="email-address"
           />
+          {validation.email && <Text style={styles.errorText}>{validation.email}</Text>}
+
           <TextInput
             style={styles.input}
             placeholder="Relationship (e.g., Spouse, Friend)"
@@ -252,7 +284,17 @@ const styles = StyleSheet.create({
     color: COLORS.text,
     borderWidth: 1,
     borderColor: COLORS.border,
-    marginBottom: SPACING.md,
+    marginBottom: SPACING.sm,
+  },
+  inputError: {
+    borderColor: COLORS.danger,
+  },
+  errorText: {
+    color: COLORS.danger,
+    fontSize: FONT_SIZES.xs,
+    marginBottom: SPACING.sm,
+    marginTop: -SPACING.xs,
+    marginLeft: SPACING.xs,
   },
   formButtons: {
     flexDirection: 'row',

@@ -13,11 +13,16 @@ import SettingsScreen from '../screens/SettingsScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
-export default function AppNavigator() {
+interface Props {
+  /** When true, skip onboarding and show Home. Checked via storageService at app init. */
+  isOnboardingComplete?: boolean;
+}
+
+export default function AppNavigator({ isOnboardingComplete = false }: Props) {
   return (
     <NavigationContainer>
       <Stack.Navigator
-        initialRouteName="Onboarding"
+        initialRouteName={isOnboardingComplete ? 'Home' : 'Onboarding'}
         screenOptions={{
           headerStyle: {
             backgroundColor: COLORS.background,

@@ -24,7 +24,7 @@ export function ContactsProvider({ children }: { children: ReactNode }) {
 
   const loadContacts = async () => {
     const stored = await storageService.getEmergencyContacts();
-    setContacts(stored as EmergencyContact[]);
+    setContacts(stored);
     setIsLoading(false);
   };
 
@@ -34,7 +34,7 @@ export function ContactsProvider({ children }: { children: ReactNode }) {
       id: uuidv4(),
       createdAt: new Date(),
       isVerified: false,
-    } as EmergencyContact;
+    };
     const updated = [...contacts, contact];
     await storageService.setEmergencyContacts(updated);
     setContacts(updated);
