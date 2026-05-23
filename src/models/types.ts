@@ -54,6 +54,7 @@ export interface UserSettings {
 
 export interface UserProfile {
   id: string;
+  name: string;
   createdAt: Date;
   lastActivityAt: Date;
   isConfirmedAlive: boolean;

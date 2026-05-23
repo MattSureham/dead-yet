@@ -79,7 +79,7 @@ function ChipSelector({
 
 export default function SettingsScreen({ navigation }: Props) {
   const { profile, updateSettings } = useUser();
-  const { changePin } = useSecurity();
+  const { changePin, resetSecurity } = useSecurity();
 
   // ---- Webhook state ----
   const [webhookUrl, setWebhookUrl] = useState(
@@ -177,6 +177,7 @@ export default function SettingsScreen({ navigation }: Props) {
           text: 'Delete',
           style: 'destructive',
           onPress: async () => {
+            await resetSecurity();
             await storageService.clear();
             navigation.reset({
               index: 0,

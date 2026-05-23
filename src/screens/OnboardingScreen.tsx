@@ -15,6 +15,7 @@ import { RootStackParamList } from '../navigation/types';
 import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from '../constants/theme';
 import { useUser } from '../contexts/UserContext';
 import { useSecurity } from '../contexts/SecurityContext';
+import { storageService } from '../services/StorageService';
 import { notificationService } from '../services/NotificationService';
 import { isValidPin, pinStrength } from '../utils/validation';
 
@@ -61,14 +62,13 @@ export default function OnboardingScreen({ navigation }: Props) {
         // Request notification permissions early so reminders work from day 1
         await notificationService.requestPermissions();
 
-        // Create the user profile (name is captured but UserProfile doesn't
-        // have a name field yet — future enhancement). The profile is created
-        // *before* setupPin so SecurityContext can find it and attach pinHash.
-        await updateProfile({});
+        // Create the profile *before* setupPin so SecurityContext can attach pinHash
+        await updateProfile({ name: name.trim() });
 
         // Wire into the SecurityContext state machine: hashes the PIN,
         // stores it in the profile, and transitions to 'authenticated'.
         await setupPin(pin);
+        await storageService.setOnboardingComplete(true);
 
         navigation.replace('Home');
       } catch (err) {

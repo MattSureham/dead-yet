@@ -363,6 +363,7 @@ export function SecurityProvider({ children }: { children: ReactNode }) {
         // The OnboardingScreen will flesh this out with the user's details.
         await storageService.setUserProfile({
           id: 'pending',
+          name: '',
           createdAt: new Date(),
           lastActivityAt: new Date(),
           isConfirmedAlive: true,

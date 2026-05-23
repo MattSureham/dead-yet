@@ -34,13 +34,14 @@ export function UserProvider({ children }: { children: ReactNode }) {
     if (!profile) {
       const newProfile: UserProfile = {
         id: uuidv4(),
+        name: '',
         createdAt: new Date(),
         lastActivityAt: new Date(),
         isConfirmedAlive: true,
         lastConfirmedAt: new Date(),
         settings: DEFAULT_SETTINGS,
         ...updates,
-      } as UserProfile;
+      };
       await storageService.setUserProfile(newProfile);
       setProfile(newProfile);
     } else {

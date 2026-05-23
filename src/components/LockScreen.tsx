@@ -211,6 +211,13 @@ export default function LockScreen() {
     );
   }, [resetSecurity]);
 
+  // Auto-submit when PIN reaches 4+ digits
+  useEffect(() => {
+    if (pin.length >= 4 && authState === 'unauthenticated') {
+      handleSubmit();
+    }
+  }, [pin, handleSubmit, authState]);
+
   // -------------------------------------------------------------------
   // Keypad layout
   // -------------------------------------------------------------------

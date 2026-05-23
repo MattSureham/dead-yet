@@ -7,6 +7,7 @@ import { UserProfile, EmergencyContact, DeathNote, ActivityLog } from '../../mod
 
 const mockProfile: UserProfile = {
   id: 'test-user-1',
+  name: 'Test User',
   createdAt: new Date('2025-01-01'),
   lastActivityAt: new Date('2025-06-01'),
   isConfirmedAlive: true,

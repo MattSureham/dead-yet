@@ -53,6 +53,9 @@ export default function HomeScreen({ navigation }: Props) {
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.header}>
         <Text style={styles.emoji}>{days >= 3 ? '😰' : days >= 2 ? '😟' : '😊'}</Text>
+        {profile?.name ? (
+          <Text style={styles.greeting}>Hey, {profile.name}</Text>
+        ) : null}
         <Text style={styles.title}>
           {days >= 3 ? 'Are you alive?' : days >= 2 ? 'Getting quiet...' : 'All good!'}
         </Text>
@@ -121,6 +124,11 @@ const styles = StyleSheet.create({
   emoji: {
     fontSize: 64,
     marginBottom: SPACING.md,
+  },
+  greeting: {
+    fontSize: FONT_SIZES.md,
+    color: COLORS.textSecondary,
+    marginBottom: SPACING.xs,
   },
   title: {
     fontSize: FONT_SIZES.xl,

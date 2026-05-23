@@ -1,5 +1,3 @@
-import { emergencyService } from '../../services/EmergencyService';
-import { storageService } from '../../services/StorageService';
 import { EmergencyContact } from '../../models/types';
 
 jest.mock('../../services/StorageService', () => ({
@@ -10,6 +8,28 @@ jest.mock('../../services/StorageService', () => ({
     getUserProfile: jest.fn(),
   },
 }));
+
+jest.mock('../../services/NotificationService', () => ({
+  notificationService: {
+    sendEmergencyNotification: jest.fn(),
+    requestPermissions: jest.fn(),
+    scheduleInactivityCheck: jest.fn(),
+    scheduleConfirmationTimeout: jest.fn(),
+    cancelAllNotifications: jest.fn(),
+    sendImmediateNotification: jest.fn(),
+    addNotificationReceivedListener: jest.fn(),
+    addNotificationResponseListener: jest.fn(),
+  },
+}));
+
+// Mock react-native's Linking and Platform only (other RN exports untouched)
+jest.mock('react-native/Libraries/Linking/Linking', () => ({
+  canOpenURL: jest.fn().mockResolvedValue(false),
+  openURL: jest.fn().mockResolvedValue(undefined),
+}));
+
+import { storageService } from '../../services/StorageService';
+import { emergencyService } from '../../services/EmergencyService';
 
 const mockContact: EmergencyContact = {
   id: 'c1',
@@ -40,14 +60,14 @@ describe('EmergencyService', () => {
     (storageService.setEmergencyContacts as jest.Mock).mockResolvedValue(true);
     (storageService.getDeathNote as jest.Mock).mockResolvedValue(null);
     (storageService.getUserProfile as jest.Mock).mockResolvedValue(null);
+    emergencyService.resetEmergencySequence();
+    // Override the 30s wait to be instant in tests
+    (emergencyService as any).wait = (ms: number) => Promise.resolve();
   });
 
   describe('getSortedContacts', () => {
     it('sorts contacts by priority ascending', async () => {
-      (storageService.getEmergencyContacts as jest.Mock).mockResolvedValue([
-        mockContact,
-        mockContact2,
-      ]);
+      (storageService.getEmergencyContacts as jest.Mock).mockResolvedValue([mockContact, mockContact2]);
 
       const sorted = await emergencyService.getSortedContacts();
       expect(sorted[0].priority).toBeLessThanOrEqual(sorted[1].priority);
@@ -70,10 +90,7 @@ describe('EmergencyService', () => {
 
   describe('removeContact', () => {
     it('removes a contact by id', async () => {
-      (storageService.getEmergencyContacts as jest.Mock).mockResolvedValue([
-        mockContact,
-        mockContact2,
-      ]);
+      (storageService.getEmergencyContacts as jest.Mock).mockResolvedValue([mockContact, mockContact2]);
 
       await emergencyService.removeContact('c1');
 
@@ -107,15 +124,17 @@ describe('EmergencyService', () => {
 
   describe('initiateEmergencySequence', () => {
     it('iterates contacts by priority order', async () => {
-      (storageService.getEmergencyContacts as jest.Mock).mockResolvedValue([
-        mockContact,
-        mockContact2,
-      ]);
+      (storageService.getEmergencyContacts as jest.Mock).mockResolvedValue([mockContact, mockContact2]);
 
       const results = await emergencyService.initiateEmergencySequence();
       // Bob (priority 1) should be first
       expect(results[0].contactId).toBe('c2');
       expect(results[1].contactId).toBe('c1');
+    });
+
+    it('returns empty array when no contacts exist', async () => {
+      const result = await emergencyService.initiateEmergencySequence();
+      expect(result).toEqual([]);
     });
   });
 });

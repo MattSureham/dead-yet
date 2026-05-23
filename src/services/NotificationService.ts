@@ -84,6 +84,19 @@ class NotificationService {
     });
   }
 
+  async sendEmergencyNotification(payload: { title: string; body: string; data?: Record<string, unknown> }): Promise<void> {
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title: payload.title,
+        body: payload.body,
+        data: { ...payload.data, type: 'emergency' },
+        sound: 'default',
+        priority: Notifications.AndroidNotificationPriority.HIGH,
+      },
+      trigger: null,
+    });
+  }
+
   addNotificationReceivedListener(
     callback: (notification: Notifications.Notification) => void
   ): Notifications.Subscription {
