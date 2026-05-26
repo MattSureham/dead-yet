@@ -89,7 +89,7 @@ export default function OnboardingScreen({ navigation }: Props) {
             <Text style={styles.title}>Dead Yet?</Text>
             <Text style={styles.subtitle}>
               An app that monitors your daily activity and checks in on you.{'\n'}
-              If you don't respond... we alert your emergency contacts.
+              If you don&apos;t respond... we alert your emergency contacts.
             </Text>
             <TouchableOpacity style={styles.button} onPress={handleNext}>
               <Text style={styles.buttonText}>Get Started</Text>
@@ -122,7 +122,7 @@ export default function OnboardingScreen({ navigation }: Props) {
             <Text style={styles.stepLabel}>Step 2 of 2</Text>
             <Text style={styles.title}>Create a PIN</Text>
             <Text style={styles.subtitle}>
-              This PIN protects your Final Wishes & Instructions. You'll need it to access them later.
+              This PIN protects your Final Wishes &amp; Instructions. You&apos;ll need it to access them later.
             </Text>
             <TextInput
               style={[styles.input, pin.length > 0 && strength === 'weak' && styles.inputError]}

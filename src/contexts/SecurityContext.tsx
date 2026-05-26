@@ -75,6 +75,7 @@ import React, {
 import { AppState, AppStateStatus } from 'react-native';
 import { verifyPin, hashPin } from '../utils/hash';
 import { storageService } from '../services/StorageService';
+import { cryptoService } from '../services/CryptoService';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -162,6 +163,28 @@ const LOCKOUT_DURATION_2_MS = 5 * 60 * 1000; // 5 minutes
 
 /** Lockout duration for level-3 (9 failures). */
 const LOCKOUT_DURATION_3_MS = 30 * 60 * 1000; // 30 minutes
+
+// ---------------------------------------------------------------------------
+// Module-level pinHash ref
+// ---------------------------------------------------------------------------
+
+/**
+ * Active PIN hash reference, updated by SecurityProvider whenever the user
+ * authenticates, changes their PIN, or locks the app.
+ *
+ * Exported so singleton services (EmergencyService, EmergencyCascadeService,
+ * etc.) can access the current pinHash for decryption without being inside
+ * the React tree. The SecurityProvider keeps this in sync with its internal
+ * `pinHashRef`.
+ *
+ * @example
+ *   import { activePinHashRef } from '../contexts/SecurityContext';
+ *   const pinHash = activePinHashRef.current;
+ *   if (pinHash) {
+ *     const decrypted = await cryptoService.decrypt(blob, pinHash);
+ *   }
+ */
+export const activePinHashRef: { current: string | null } = { current: null };
 
 // ---------------------------------------------------------------------------
 // Context
@@ -267,6 +290,7 @@ export function SecurityProvider({ children }: { children: ReactNode }) {
           if (isBackgroundedRef.current) {
             // User hasn't returned — lock the app
             pinHashRef.current = null;
+            activePinHashRef.current = null;
             setAuthState('unauthenticated');
           }
         }, AUTO_LOCK_GRACE_PERIOD_MS);
@@ -310,6 +334,7 @@ export function SecurityProvider({ children }: { children: ReactNode }) {
       if (valid) {
         // Success — authenticate and reset counters
         pinHashRef.current = storedHash;
+        activePinHashRef.current = storedHash;
         failedAttemptsRef.current = 0;
         setFailedAttempts(0);
         setLockoutUntil(null);
@@ -346,6 +371,7 @@ export function SecurityProvider({ children }: { children: ReactNode }) {
 
   const lock = useCallback(() => {
     pinHashRef.current = null;
+    activePinHashRef.current = null;
     setAuthState('unauthenticated');
   }, []);
 
@@ -379,6 +405,7 @@ export function SecurityProvider({ children }: { children: ReactNode }) {
 
       // Authenticate immediately after setup
       pinHashRef.current = newHash;
+      activePinHashRef.current = newHash;
       failedAttemptsRef.current = 0;
       setFailedAttempts(0);
       setLockoutUntil(null);
@@ -403,13 +430,62 @@ export function SecurityProvider({ children }: { children: ReactNode }) {
       const valid = await verifyPin(oldPin, storedHash);
       if (!valid) return false;
 
-      // Hash new PIN and save
+      // Hash new PIN
       const newHash = await hashPin(newPin);
+
+      // ---- Re-encrypt existing data with the new key ----
+      // Without this step, all encrypted data (death notes, contacts)
+      // becomes permanently unreadable after the PIN change because
+      // the AES key is derived from the pinHash.
+
+      // Re-encrypt death note if it exists and is encrypted
+      const deathNoteRaw = await storageService.getDeathNoteRaw();
+      if (deathNoteRaw && cryptoService.isEncrypted(deathNoteRaw)) {
+        try {
+          const reEncrypted = await cryptoService.reEncrypt(
+            deathNoteRaw,
+            storedHash,
+            newHash,
+          );
+          await storageService.setDeathNoteRaw(reEncrypted);
+        } catch (err) {
+          console.error(
+            '[SecurityContext] Failed to re-encrypt death note during PIN change:',
+            err,
+          );
+          // Continue — don't block the PIN change, but log the error.
+          // The old data remains encrypted with the old key and will
+          // become unreadable. This is a safety trade-off: better to
+          // complete the PIN change than leave the app in an
+          // inconsistent state.
+        }
+      }
+
+      // Re-encrypt contacts if they exist and are encrypted
+      const contactsRaw = await storageService.getEmergencyContactsRaw();
+      if (contactsRaw && cryptoService.isEncrypted(contactsRaw)) {
+        try {
+          const reEncrypted = await cryptoService.reEncrypt(
+            contactsRaw,
+            storedHash,
+            newHash,
+          );
+          await storageService.setEmergencyContactsRaw(reEncrypted);
+        } catch (err) {
+          console.error(
+            '[SecurityContext] Failed to re-encrypt contacts during PIN change:',
+            err,
+          );
+        }
+      }
+
+      // ---- Save the new hash ----
       profile.settings.pinHash = newHash;
       await storageService.setUserProfile(profile);
 
       // Update in-memory key material
       pinHashRef.current = newHash;
+      activePinHashRef.current = newHash;
       return true;
     } catch (err) {
       console.error('[SecurityContext] changePin error:', err);
@@ -428,6 +504,7 @@ export function SecurityProvider({ children }: { children: ReactNode }) {
 
       // Wipe in-memory state
       pinHashRef.current = null;
+      activePinHashRef.current = null;
       failedAttemptsRef.current = 0;
       setFailedAttempts(0);
       setLockoutUntil(null);

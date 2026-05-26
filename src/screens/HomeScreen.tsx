@@ -5,6 +5,8 @@ import { RootStackParamList } from '../navigation/types';
 import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from '../constants/theme';
 import { useUser } from '../contexts/UserContext';
 import { useActivity } from '../contexts/ActivityContext';
+import { aliveMonitorService } from '../services/AliveMonitorService';
+import { AliveStatus } from '../models/types';
 import { formatDuration, daysBetween } from '../utils/format';
 
 type Props = {
@@ -15,10 +17,14 @@ export default function HomeScreen({ navigation }: Props) {
   const { profile, confirmAlive } = useUser();
   const { todayScreenTime, manualCheckIn, refresh } = useActivity();
   const [isCheckingIn, setIsCheckingIn] = useState(false);
+  const [aliveStatus, setAliveStatus] = useState<AliveStatus | null>(null);
 
   useEffect(() => {
     refresh();
-  }, []);
+    aliveMonitorService.evaluate().then(setAliveStatus);
+    const unsub = aliveMonitorService.onStatusChange(setAliveStatus);
+    return unsub;
+  }, [refresh]);
 
   const getDaysSinceActivity = () => {
     if (!profile?.lastActivityAt) return 0;
@@ -49,6 +55,33 @@ export default function HomeScreen({ navigation }: Props) {
   const days = getDaysSinceActivity();
   const isAtRisk = days >= 2;
 
+  const aliveStatusLabel = (state: AliveStatus['state']): string => {
+    switch (state) {
+      case 'active': return 'Active';
+      case 'quiet': return 'Quiet';
+      case 'silent': return 'Silent — confirm now';
+      case 'presumed_dead': return 'EMERGENCY';
+    }
+  };
+
+  const statusBadgeStyle = (state: AliveStatus['state']) => {
+    switch (state) {
+      case 'active': return styles.statusBadgeActive;
+      case 'quiet': return styles.statusBadgeQuiet;
+      case 'silent': return styles.statusBadgeSilent;
+      case 'presumed_dead': return styles.statusBadgeDead;
+    }
+  };
+
+  const statusBadgeTextStyle = (state: AliveStatus['state']) => {
+    switch (state) {
+      case 'active': return styles.statusBadgeTextActive;
+      case 'quiet': return styles.statusBadgeTextQuiet;
+      case 'silent': return styles.statusBadgeTextSilent;
+      case 'presumed_dead': return styles.statusBadgeTextDead;
+    }
+  };
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.header}>
@@ -62,6 +95,18 @@ export default function HomeScreen({ navigation }: Props) {
         {profile?.lastActivityAt && (
           <Text style={styles.lastActivity}>
             Last activity: {days === 0 ? 'Today' : `${days} day${days > 1 ? 's' : ''} ago`}
+          </Text>
+        )}
+        {aliveStatus && (
+          <View style={[styles.statusBadge, statusBadgeStyle(aliveStatus.state)]}>
+            <Text style={[styles.statusBadgeText, statusBadgeTextStyle(aliveStatus.state)]}>
+              {aliveStatusLabel(aliveStatus.state)}
+            </Text>
+          </View>
+        )}
+        {aliveStatus?.nextCheckAt && aliveStatus.state !== 'presumed_dead' && (
+          <Text style={styles.nextCheck}>
+            Next check: {aliveStatus.nextCheckAt.toLocaleString()}
           </Text>
         )}
       </View>
@@ -140,6 +185,27 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZES.sm,
     color: COLORS.textSecondary,
   },
+  nextCheck: {
+    fontSize: FONT_SIZES.xs,
+    color: COLORS.textMuted,
+    marginTop: SPACING.xs,
+  },
+  statusBadge: {
+    marginTop: SPACING.sm,
+    paddingVertical: SPACING.xs,
+    paddingHorizontal: SPACING.md,
+    borderRadius: BORDER_RADIUS.full,
+    borderWidth: 1,
+  },
+  statusBadgeActive: { backgroundColor: COLORS.success + '20', borderColor: COLORS.success },
+  statusBadgeQuiet: { backgroundColor: COLORS.warning + '20', borderColor: COLORS.warning },
+  statusBadgeSilent: { backgroundColor: COLORS.warning + '30', borderColor: COLORS.warning },
+  statusBadgeDead: { backgroundColor: COLORS.danger + '20', borderColor: COLORS.danger },
+  statusBadgeText: { fontSize: FONT_SIZES.xs, fontWeight: '600' },
+  statusBadgeTextActive: { color: COLORS.success },
+  statusBadgeTextQuiet: { color: COLORS.warning },
+  statusBadgeTextSilent: { color: COLORS.warning },
+  statusBadgeTextDead: { color: COLORS.danger },
   statsContainer: {
     flexDirection: 'row',
     gap: SPACING.md,

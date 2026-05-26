@@ -10,14 +10,25 @@ type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Activity'>;
 };
 
-export default function ActivityScreen({ navigation }: Props) {
-  const { todayScreenTime, weeklyScreenTime, appUsage, manualCheckIn, refresh, isLoading } = useActivity();
+/** Compute day labels for the last 7 days, ending with today. */
+function getLast7DayLabels(): string[] {
+  const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const todayIndex = new Date().getDay();
+  return Array.from({ length: 7 }, (_, i) => {
+    const idx = (todayIndex - 6 + i + 7) % 7;
+    return dayNames[idx];
+  });
+}
+
+export default function ActivityScreen({ navigation: _navigation }: Props) {
+  const { todayScreenTime, weeklyScreenTime, appUsage, manualCheckIn, refresh } = useActivity();
 
   useEffect(() => {
     refresh();
-  }, []);
+  }, [refresh]);
 
   const maxWeekly = Math.max(...weeklyScreenTime, 1);
+  const dayLabels = getLast7DayLabels();
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -27,7 +38,7 @@ export default function ActivityScreen({ navigation }: Props) {
       </View>
 
       <View style={styles.todayCard}>
-        <Text style={styles.cardLabel}>Today's Screen Time</Text>
+        <Text style={styles.cardLabel}>Today&apos;s Screen Time</Text>
         <Text style={styles.todayValue}>{formatDuration(todayScreenTime)}</Text>
         <TouchableOpacity style={styles.checkInButton} onPress={manualCheckIn}>
           <Text style={styles.checkInText}>✓ Manual Check-in</Text>
@@ -38,12 +49,11 @@ export default function ActivityScreen({ navigation }: Props) {
         <Text style={styles.sectionTitle}>This Week</Text>
         <View style={styles.chartContainer}>
           {weeklyScreenTime.map((minutes, index) => {
-            const day = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
             const height = (minutes / maxWeekly) * 100;
             return (
               <View key={index} style={styles.barContainer}>
                 <View style={[styles.bar, { height: `${Math.max(height, 5)}%` }]} />
-                <Text style={styles.barLabel}>{day[index]}</Text>
+                <Text style={styles.barLabel}>{dayLabels[index]}</Text>
               </View>
             );
           })}

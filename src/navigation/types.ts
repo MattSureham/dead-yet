@@ -1,4 +1,4 @@
-import { EmergencyContact, DeathNote, ActivityLog } from '../models/types';
+import { EmergencyContact } from '../models/types';
 
 export type RootStackParamList = {
   Onboarding: undefined;
@@ -23,8 +23,6 @@ export type DeathNoteStackParamList = {
   OtherInfo: undefined;
 };
 
-declare global {
-  namespace ReactNavigation {
-    interface RootParamList extends RootStackParamList {}
-  }
+declare module '@react-navigation/native' {
+  interface RootParamList extends RootStackParamList {}
 }

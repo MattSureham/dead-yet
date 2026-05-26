@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   TextInput,
   KeyboardAvoidingView,
   Platform,
+  Share,
 } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/types';
@@ -16,6 +17,7 @@ import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from '../constants/theme';
 import { useUser } from '../contexts/UserContext';
 import { useSecurity } from '../contexts/SecurityContext';
 import { storageService } from '../services/StorageService';
+import { backupService } from '../services/BackupService';
 import { isValidUrl, isValidPin, pinStrength } from '../utils/validation';
 
 // ---------------------------------------------------------------------------
@@ -79,7 +81,80 @@ function ChipSelector({
 
 export default function SettingsScreen({ navigation }: Props) {
   const { profile, updateSettings } = useUser();
-  const { changePin, resetSecurity } = useSecurity();
+  const { changePin, resetSecurity, getPinHash } = useSecurity();
+
+  // ---- Backup state ----
+  const [lastBackupAt, setLastBackupAt] = useState<Date | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
+  const [showImportDialog, setShowImportDialog] = useState(false);
+  const [importBlob, setImportBlob] = useState('');
+
+  // Load last backup time
+  useEffect(() => {
+    backupService.getLastBackupTime().then(setLastBackupAt);
+  }, []);
+
+  // ---- Backup handlers ----
+
+  const handleExportBackup = async () => {
+    const pinHash = getPinHash();
+    if (!pinHash) {
+      Alert.alert('Error', 'You must be authenticated to export a backup.');
+      return;
+    }
+    setIsExporting(true);
+    try {
+      const blob = await backupService.exportBackup(pinHash);
+      await Share.share({ message: blob, title: 'Dead Yet Backup' });
+      const now = new Date();
+      setLastBackupAt(now);
+      Alert.alert('Backup Exported', 'Your encrypted backup has been shared.');
+    } catch (err) {
+      console.error('[Settings] Export backup error:', err);
+      Alert.alert('Error', 'Failed to export backup. Please try again.');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleImportBackup = async () => {
+    if (!importBlob.trim()) {
+      Alert.alert('Missing Data', 'Please paste your backup blob first.');
+      return;
+    }
+    const pinHash = getPinHash();
+    if (!pinHash) {
+      Alert.alert('Error', 'You must be authenticated to import a backup.');
+      return;
+    }
+    try {
+      const summary = await backupService.importBackup(importBlob.trim(), pinHash);
+      const parts = [
+        summary.profile ? '✓ Profile restored' : '— No profile in backup',
+        `✓ ${summary.contacts} contact${summary.contacts !== 1 ? 's' : ''} restored`,
+        summary.deathNote ? '✓ Death note restored' : '— No death note in backup',
+        `✓ ${summary.activityLogs} activity log${summary.activityLogs !== 1 ? 's' : ''} restored`,
+      ];
+      Alert.alert('Backup Restored', parts.join('\n'));
+      setShowImportDialog(false);
+      setImportBlob('');
+      const now = new Date();
+      setLastBackupAt(now);
+    } catch (err) {
+      console.error('[Settings] Import backup error:', err);
+      Alert.alert('Error', 'Failed to import backup. The blob may be corrupt or the PIN may not match.');
+    }
+  };
+
+  const formatLastBackup = (date: Date | null): string => {
+    if (!date) return 'Never';
+    const diff = Date.now() - date.getTime();
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    if (hours < 1) return 'Just now';
+    if (hours < 24) return `${hours}h ago`;
+    const days = Math.floor(hours / 24);
+    return `${days}d ago`;
+  };
 
   // ---- Webhook state ----
   const [webhookUrl, setWebhookUrl] = useState(
@@ -419,8 +494,8 @@ export default function SettingsScreen({ navigation }: Props) {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Browser History Clearing</Text>
           <Text style={styles.sectionSubtitle}>
-            When you're confirmed dead, this webhook is called to clear your
-            browser history. Requires the "Dead Yet" browser extension.
+            When you&apos;re confirmed dead, this webhook is called to clear your
+            browser history. Requires the &quot;Dead Yet&quot; browser extension.
           </Text>
           <TextInput
             style={[styles.input, webhookError && styles.inputError]}
@@ -442,6 +517,66 @@ export default function SettingsScreen({ navigation }: Props) {
           >
             <Text style={styles.saveButtonText}>Save Webhook URL</Text>
           </TouchableOpacity>
+        </View>
+
+        {/* ================================================================ */}
+        {/*  BACKUP & RESTORE                                                 */}
+        {/* ================================================================ */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Backup & Restore</Text>
+          <Text style={styles.sectionSubtitle}>
+            Export your encrypted data to share across devices, or restore from
+            a previous backup. Data is encrypted with your PIN.
+          </Text>
+          <Text style={styles.lastBackupText}>
+            Last backup: {formatLastBackup(lastBackupAt)}
+          </Text>
+          <TouchableOpacity
+            style={[styles.backupButton, isExporting && styles.buttonDisabled]}
+            onPress={handleExportBackup}
+            disabled={isExporting}
+          >
+            <Text style={styles.backupButtonText}>
+              {isExporting ? 'Exporting...' : '📤 Export Encrypted Backup'}
+            </Text>
+          </TouchableOpacity>
+          {!showImportDialog ? (
+            <TouchableOpacity
+              style={styles.restoreButton}
+              onPress={() => setShowImportDialog(true)}
+            >
+              <Text style={styles.restoreButtonText}>📥 Import Backup</Text>
+            </TouchableOpacity>
+          ) : (
+            <View style={styles.importCard}>
+              <Text style={styles.importLabel}>Paste your backup blob below:</Text>
+              <TextInput
+                style={[styles.input, styles.importInput]}
+                placeholder="DBv1:..."
+                placeholderTextColor={COLORS.textMuted}
+                value={importBlob}
+                onChangeText={setImportBlob}
+                multiline
+                numberOfLines={3}
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+              <View style={styles.importButtons}>
+                <TouchableOpacity
+                  style={styles.cancelBtn}
+                  onPress={() => {
+                    setShowImportDialog(false);
+                    setImportBlob('');
+                  }}
+                >
+                  <Text style={styles.cancelText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.saveBtn} onPress={handleImportBackup}>
+                  <Text style={styles.saveText}>Restore</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
         </View>
 
         {/* ================================================================ */}
@@ -707,6 +842,60 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   dangerText: { color: COLORS.danger, fontSize: FONT_SIZES.md },
+
+  // Backup
+  lastBackupText: {
+    color: COLORS.textSecondary,
+    fontSize: FONT_SIZES.sm,
+    marginBottom: SPACING.md,
+  },
+  backupButton: {
+    backgroundColor: COLORS.surface,
+    borderRadius: BORDER_RADIUS.lg,
+    padding: SPACING.md,
+    alignItems: 'center',
+    marginBottom: SPACING.sm,
+    borderWidth: 1,
+    borderColor: COLORS.primary,
+  },
+  backupButtonText: {
+    color: COLORS.primary,
+    fontSize: FONT_SIZES.md,
+    fontWeight: '600',
+  },
+  restoreButton: {
+    backgroundColor: COLORS.surface,
+    borderRadius: BORDER_RADIUS.lg,
+    padding: SPACING.md,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  restoreButtonText: {
+    color: COLORS.text,
+    fontSize: FONT_SIZES.md,
+  },
+  importCard: {
+    backgroundColor: COLORS.surface,
+    borderRadius: BORDER_RADIUS.lg,
+    padding: SPACING.md,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  importLabel: {
+    color: COLORS.textSecondary,
+    fontSize: FONT_SIZES.sm,
+    marginBottom: SPACING.sm,
+  },
+  importInput: {
+    minHeight: 80,
+    textAlignVertical: 'top',
+  },
+  importButtons: {
+    flexDirection: 'row',
+    gap: SPACING.md,
+    marginTop: SPACING.sm,
+  },
 
   // Footer
   footer: { alignItems: 'center', padding: SPACING.xl },

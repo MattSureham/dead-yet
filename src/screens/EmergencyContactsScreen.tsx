@@ -19,8 +19,8 @@ type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'EmergencyContacts'>;
 };
 
-export default function EmergencyContactsScreen({ navigation }: Props) {
-  const { contacts, addContact, removeContact, updateContact } = useContacts();
+export default function EmergencyContactsScreen({ navigation: _navigation }: Props) {
+  const { contacts, addContact, removeContact } = useContacts();
   const [showAddForm, setShowAddForm] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
@@ -83,7 +83,7 @@ export default function EmergencyContactsScreen({ navigation }: Props) {
       <View style={styles.header}>
         <Text style={styles.title}>Emergency Contacts</Text>
         <Text style={styles.subtitle}>
-          These people will be called if you don't respond to check-ins
+          These people will be called if you don&apos;t respond to check-ins
         </Text>
       </View>
 

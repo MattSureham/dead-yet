@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,16 +8,10 @@ import {
   TextInput,
   Alert,
 } from 'react-native';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../navigation/types';
 import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from '../constants/theme';
 import { useDeathNote } from '../contexts/DeathNoteContext';
 
-type Props = {
-  navigation: NativeStackNavigationProp<RootStackParamList, 'DeathNote'>;
-};
-
-export default function DeathNoteScreen({ navigation }: Props) {
+export default function DeathNoteScreen() {
   const { deathNote, updateAddress, addFinancialAccount, removeFinancialAccount, addPet, removePet, updateOtherInfo } = useDeathNote();
   const [showAddressForm, setShowAddressForm] = useState(false);
   const [showFinancialForm, setShowFinancialForm] = useState(false);
@@ -46,6 +40,36 @@ export default function DeathNoteScreen({ navigation }: Props) {
     veterinaryContact: '',
     otherCareNotes: '',
   });
+
+  // Lazy-init address state when form opens — pre-fills existing data on edit
+  useEffect(() => {
+    if (showAddressForm && deathNote?.address) {
+      setAddress({
+        street: deathNote.address.street,
+        city: deathNote.address.city,
+        state: deathNote.address.state,
+        zipCode: deathNote.address.zipCode,
+        country: deathNote.address.country,
+        entryCode: deathNote.address.entryCode ?? '',
+      });
+    } else if (showAddressForm) {
+      setAddress({ street: '', city: '', state: '', zipCode: '', country: '', entryCode: '' });
+    }
+  }, [showAddressForm, deathNote?.address]);
+
+  // Lazy-init financial state when form opens — pre-fills existing data on edit
+  useEffect(() => {
+    if (showFinancialForm) {
+      setFinancial({ institution: '', accountType: 'bank', accountName: '', notes: '' });
+    }
+  }, [showFinancialForm]);
+
+  // Lazy-init pet state when form opens — pre-fills existing data on edit
+  useEffect(() => {
+    if (showPetForm) {
+      setPet({ name: '', species: '', feedingInstructions: '', veterinaryContact: '', otherCareNotes: '' });
+    }
+  }, [showPetForm]);
 
   const handleSaveAddress = async () => {
     if (!address.street.trim()) {

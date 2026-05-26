@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { RootStackParamList } from './types';
 import { COLORS } from '../constants/theme';
@@ -13,6 +13,12 @@ import SettingsScreen from '../screens/SettingsScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
+/**
+ * Exported navigation ref so that notification response handlers
+ * (in App.tsx) can navigate without being inside the React tree.
+ */
+export const navigationRef = createNavigationContainerRef<RootStackParamList>();
+
 interface Props {
   /** When true, skip onboarding and show Home. Checked via storageService at app init. */
   isOnboardingComplete?: boolean;
@@ -20,7 +26,7 @@ interface Props {
 
 export default function AppNavigator({ isOnboardingComplete = false }: Props) {
   return (
-    <NavigationContainer>
+    <NavigationContainer ref={navigationRef}>
       <Stack.Navigator
         initialRouteName={isOnboardingComplete ? 'Home' : 'Onboarding'}
         screenOptions={{

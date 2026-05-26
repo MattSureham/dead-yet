@@ -78,3 +78,18 @@ export interface NotificationPayload {
   body: string;
   data?: Record<string, unknown>;
 }
+
+/** AliveMonitorService state — describes how recently the user was active. */
+export type AliveState = 'active' | 'quiet' | 'silent' | 'presumed_dead';
+
+export interface AliveStatus {
+  state: AliveState;
+  /** The most recent activity timestamp, or null if no activity has ever been recorded. */
+  lastActivity: Date | null;
+  /** Hours since the last recorded activity (0 = within the last hour). */
+  silenceHours: number;
+  /** When the next automated status check should occur, or null if in terminal state. */
+  nextCheckAt: Date | null;
+  /** Confidence level (0–1) that the current state assessment is correct. */
+  confidence: number;
+}

@@ -28,6 +28,21 @@ jest.mock('react-native/Libraries/Linking/Linking', () => ({
   openURL: jest.fn().mockResolvedValue(undefined),
 }));
 
+// uuid is an ESM module — mock it for Jest
+jest.mock('uuid', () => {
+  let counter = 0;
+  return {
+    v4: jest.fn(() => `mock-uuid-${++counter}`),
+  };
+});
+
+// DeathNoteService is transitively imported by EmergencyService
+jest.mock('../../services/DeathNoteService', () => ({
+  deathNoteService: {
+    getDeathNote: jest.fn().mockResolvedValue(null),
+  },
+}));
+
 import { storageService } from '../../services/StorageService';
 import { emergencyService } from '../../services/EmergencyService';
 
@@ -62,7 +77,8 @@ describe('EmergencyService', () => {
     (storageService.getUserProfile as jest.Mock).mockResolvedValue(null);
     emergencyService.resetEmergencySequence();
     // Override the 30s wait to be instant in tests
-    (emergencyService as any).wait = (ms: number) => Promise.resolve();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (emergencyService as any).wait = (_ms: number) => Promise.resolve();
   });
 
   describe('getSortedContacts', () => {

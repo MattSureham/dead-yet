@@ -49,7 +49,7 @@ export function pinStrength(pin: string): 'weak' | 'medium' | 'strong' {
  * Accepts: +1234567890, 1234567890, (123) 456-7890, etc.
  */
 export function isValidPhoneNumber(phone: string): boolean {
-  const stripped = phone.replace(/[\s\-\(\)\.]/g, '');
+  const stripped = phone.replace(/[\s\-().]/g, '');
   // Must be 7-15 digits, may start with optional +
   return /^\+?\d{7,15}$/.test(stripped);
 }

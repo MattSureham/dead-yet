@@ -1,7 +1,8 @@
 import { Linking, Platform } from 'react-native';
-import { EmergencyContact } from '../models/types';
+import { EmergencyContact, DeathNote, Pet, FinancialAccount } from '../models/types';
 import { storageService } from './StorageService';
 import { notificationService } from './NotificationService';
+import { deathNoteService } from './DeathNoteService';
 
 interface CallResult {
   contactId: string;
@@ -145,12 +146,31 @@ class EmergencyService {
     return false;
   }
 
-  async revealDeathNotesToContact(contact: EmergencyContact): Promise<void> {
+  /**
+   * Reveal the user's death note to an emergency contact.
+   *
+   * When a `pinHash` is provided, the death note is decrypted before
+   * being sent. Without a `pinHash`, only legacy plaintext notes (or
+   * unencrypted data) will be revealed; encrypted notes will produce
+   * a generic fallback message.
+   *
+   * @param contact - The emergency contact to reveal to.
+   * @param pinHash - Optional PIN hash for decrypting the death note.
+   */
+  async revealDeathNotesToContact(
+    contact: EmergencyContact,
+    pinHash?: string,
+  ): Promise<void> {
     this.currentPhase = 'revealing_notes';
 
-    const deathNote = await storageService.getDeathNote();
+    // Try encrypted-aware path first, fall back to legacy plaintext
+    const deathNote = await deathNoteService.getDeathNote(pinHash);
+
     if (!deathNote) {
       console.warn('[Emergency] No death note to reveal');
+      // Send a generic message so the contact knows to check the app
+      const fallback = this.buildDeathNoteSummary(null);
+      await this.sendEmergencyMessage(contact, fallback);
       return;
     }
 
@@ -164,7 +184,15 @@ class EmergencyService {
     });
   }
 
-  async runFullDeathSequence(): Promise<void> {
+  /**
+   * Run the full death sequence: clear browser history, call contacts,
+   * Send emergency messages, and reveal death notes. This is the
+   * ultimate fallback when the user is presumed dead.
+   *
+   * @param pinHash - Optional PIN hash for decrypting the death note.
+   *   If omitted, encrypted notes will produce generic fallback messages.
+   */
+  async runFullDeathSequence(pinHash?: string): Promise<void> {
     // 1. Trigger history clear webhook
     this.currentPhase = 'clearing_history';
     await this.triggerHistoryClear();
@@ -184,10 +212,10 @@ class EmergencyService {
       }
     }
 
-    // 3. Reveal death notes to all contacts
+    // 3. Reveal death notes to all contacts with decryption support
     this.currentPhase = 'revealing_notes';
     for (const contact of contacts) {
-      await this.revealDeathNotesToContact(contact);
+      await this.revealDeathNotesToContact(contact, pinHash);
     }
 
     this.currentPhase = 'complete';
@@ -198,12 +226,14 @@ class EmergencyService {
     const webhookUrl = profile?.settings?.historyClearWebhook;
 
     if (!webhookUrl) {
+      // eslint-disable-next-line no-console
       console.log('[Emergency] No history clear webhook configured');
       return false;
     }
 
     try {
       await fetch(webhookUrl, { method: 'GET', mode: 'no-cors' });
+      // eslint-disable-next-line no-console
       console.log('[Emergency] History clear webhook triggered');
       return true;
     } catch (error) {
@@ -252,17 +282,21 @@ class EmergencyService {
     return `DEAD YET ALERT: This person has not responded to activity check-ins. Please try to contact them immediately. If you cannot reach them, their Final Wishes & Instructions will be released.`;
   }
 
-  private buildDeathNoteSummary(deathNote: any): string {
+  private buildDeathNoteSummary(deathNote: DeathNote | null): string {
+    if (!deathNote) {
+      return 'FINAL WISHES & INSTRUCTIONS:\n\nThe user has configured Final Wishes & Instructions. Please open the Dead Yet app on their device to access them.';
+    }
+
     const parts: string[] = ['FINAL WISHES & INSTRUCTIONS:\n'];
 
     if (deathNote.address) {
       parts.push(`Address: ${deathNote.address.street}, ${deathNote.address.city}, ${deathNote.address.state} ${deathNote.address.zipCode}`);
     }
     if (deathNote.pets?.length) {
-      parts.push(`Pets: ${deathNote.pets.map((p: any) => `${p.name} (${p.species})`).join(', ')}`);
+      parts.push(`Pets: ${deathNote.pets.map((p: Pet) => `${p.name} (${p.species})`).join(', ')}`);
     }
     if (deathNote.financialAccounts?.length) {
-      parts.push(`Financial accounts: ${deathNote.financialAccounts.map((a: any) => `${a.institution} - ${a.accountName}`).join(', ')}`);
+      parts.push(`Financial accounts: ${deathNote.financialAccounts.map((a: FinancialAccount) => `${a.institution} - ${a.accountName}`).join(', ')}`);
     }
     if (deathNote.otherImportantInfo) {
       parts.push(`Other info: ${deathNote.otherImportantInfo}`);
