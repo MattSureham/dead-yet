@@ -279,16 +279,17 @@ export function SecurityProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const handleAppStateChange = (nextAppState: AppStateStatus) => {
       if (nextAppState === 'background' || nextAppState === 'inactive') {
-        // App going to background — start the auto-lock countdown
-        isBackgroundedRef.current = true;
-
-        if (autoLockTimerRef.current) {
-          clearTimeout(autoLockTimerRef.current);
+        // App going to background — start auto-lock countdown.
+        // Guard: iOS fires 'inactive' then 'background' in quick succession;
+        // only set the timer on the first transition to avoid resetting it.
+        if (isBackgroundedRef.current && autoLockTimerRef.current) {
+          return;
         }
+
+        isBackgroundedRef.current = true;
 
         autoLockTimerRef.current = setTimeout(() => {
           if (isBackgroundedRef.current) {
-            // User hasn't returned — lock the app
             pinHashRef.current = null;
             activePinHashRef.current = null;
             setAuthState('unauthenticated');
