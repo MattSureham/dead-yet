@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -40,6 +40,32 @@ export default function DeathNoteScreen() {
     veterinaryContact: '',
     otherCareNotes: '',
   });
+
+  // Debounced persistence for the free-text "Other Info" field so we don't
+  // trigger a full encrypt-write cycle on every keystroke.
+  const [otherInfoDraft, setOtherInfoDraft] = useState('');
+  const otherInfoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isOtherInfoInitRef = useRef(true);
+
+  // Sync draft from loaded death note on first load
+  useEffect(() => {
+    if (isOtherInfoInitRef.current && deathNote?.otherImportantInfo) {
+      setOtherInfoDraft(deathNote.otherImportantInfo);
+      isOtherInfoInitRef.current = false;
+    }
+  }, [deathNote?.otherImportantInfo]);
+
+  // Persist draft after 500ms of inactivity
+  useEffect(() => {
+    if (isOtherInfoInitRef.current) return; // Don't save initial sync
+    if (otherInfoTimerRef.current) clearTimeout(otherInfoTimerRef.current);
+    otherInfoTimerRef.current = setTimeout(() => {
+      updateOtherInfo(otherInfoDraft);
+    }, 500);
+    return () => {
+      if (otherInfoTimerRef.current) clearTimeout(otherInfoTimerRef.current);
+    };
+  }, [otherInfoDraft, updateOtherInfo]);
 
   // Lazy-init address state when form opens — pre-fills existing data on edit
   useEffect(() => {
@@ -355,8 +381,8 @@ export default function DeathNoteScreen() {
           style={[styles.input, styles.textArea]}
           placeholder="Anything else people need to know..."
           placeholderTextColor={COLORS.textMuted}
-          value={deathNote?.otherImportantInfo || ''}
-          onChangeText={updateOtherInfo}
+          value={otherInfoDraft}
+          onChangeText={setOtherInfoDraft}
           multiline
           numberOfLines={4}
         />

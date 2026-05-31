@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
 import { UserProfile, UserSettings } from '../models/types';
 import { storageService } from '../services/StorageService';
 import { DEFAULT_SETTINGS } from '../constants/theme';
@@ -62,8 +62,12 @@ export function UserProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const isConfirmingRef = useRef(false);
+
   const confirmAlive = async () => {
-    if (profile) {
+    if (!profile || isConfirmingRef.current) return;
+    isConfirmingRef.current = true;
+    try {
       const updated = {
         ...profile,
         isConfirmedAlive: true,
@@ -72,6 +76,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
       };
       await storageService.setUserProfile(updated);
       setProfile(updated);
+    } finally {
+      isConfirmingRef.current = false;
     }
   };
 

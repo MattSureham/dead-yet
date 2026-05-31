@@ -9,7 +9,6 @@ interface CallResult {
   contactName: string;
   success: boolean;
   timestamp: Date;
-  reachedUser: boolean;
   method: 'call' | 'sms' | 'both';
   error?: string;
 }
@@ -62,22 +61,17 @@ class EmergencyService {
       const callResult = await this.makeCall(contact);
       this.results.push(callResult);
 
-      // Also send SMS in parallel or after call
+      // Send SMS to the same contact
       const message = this.buildEmergencyMessage();
       const smsResult = await this.sendEmergencyMessage(contact, message);
-      if (!callResult.reachedUser && smsResult) {
+      if (smsResult) {
         this.results.push({
           contactId: contact.id,
           contactName: contact.name,
           success: true,
           timestamp: new Date(),
-          reachedUser: false,
           method: 'sms',
         });
-      }
-
-      if (callResult.reachedUser) {
-        break;
       }
 
       // Wait before trying next contact (unless it's the last one)
@@ -103,7 +97,6 @@ class EmergencyService {
           contactName: contact.name,
           success: true,
           timestamp: new Date(),
-          reachedUser: false,
           method: 'call',
         };
       }
@@ -116,7 +109,6 @@ class EmergencyService {
       contactName: contact.name,
       success: false,
       timestamp: new Date(),
-      reachedUser: false,
       method: 'call',
       error: 'Unable to initiate call',
     };
@@ -303,6 +295,12 @@ class EmergencyService {
     }
 
     return parts.join('\n');
+  }
+
+  /** Reset mutable state — called when the user clears security data. */
+  reset(): void {
+    this.currentPhase = 'idle';
+    this.results = [];
   }
 
   private wait(ms: number): Promise<void> {

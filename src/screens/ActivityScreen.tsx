@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/types';
@@ -22,6 +22,7 @@ function getLast7DayLabels(): string[] {
 
 export default function ActivityScreen({ navigation: _navigation }: Props) {
   const { todayScreenTime, weeklyScreenTime, appUsage, manualCheckIn, refresh } = useActivity();
+  const [isCheckingIn, setIsCheckingIn] = useState(false);
 
   useEffect(() => {
     refresh();
@@ -40,8 +41,22 @@ export default function ActivityScreen({ navigation: _navigation }: Props) {
       <View style={styles.todayCard}>
         <Text style={styles.cardLabel}>Today&apos;s Screen Time</Text>
         <Text style={styles.todayValue}>{formatDuration(todayScreenTime)}</Text>
-        <TouchableOpacity style={styles.checkInButton} onPress={manualCheckIn}>
-          <Text style={styles.checkInText}>✓ Manual Check-in</Text>
+        <TouchableOpacity
+          style={[styles.checkInButton, isCheckingIn && styles.checkInButtonDisabled]}
+          onPress={async () => {
+            if (isCheckingIn) return;
+            setIsCheckingIn(true);
+            try {
+              await manualCheckIn();
+            } finally {
+              setIsCheckingIn(false);
+            }
+          }}
+          disabled={isCheckingIn}
+        >
+          <Text style={styles.checkInText}>
+            {isCheckingIn ? 'Checking in...' : '✓ Manual Check-in'}
+          </Text>
         </TouchableOpacity>
       </View>
 
@@ -120,6 +135,9 @@ const styles = StyleSheet.create({
     paddingVertical: SPACING.sm,
     paddingHorizontal: SPACING.lg,
     borderRadius: BORDER_RADIUS.md,
+  },
+  checkInButtonDisabled: {
+    opacity: 0.5,
   },
   checkInText: {
     color: COLORS.text,

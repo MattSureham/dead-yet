@@ -76,6 +76,7 @@ import { AppState, AppStateStatus } from 'react-native';
 import { verifyPin, hashPin } from '../utils/hash';
 import { storageService } from '../services/StorageService';
 import { cryptoService } from '../services/CryptoService';
+import { emergencyService } from '../services/EmergencyService';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -496,6 +497,9 @@ export function SecurityProvider({ children }: { children: ReactNode }) {
 
   const resetSecurity = useCallback(async (): Promise<void> => {
     try {
+      // Reset service-level state
+      emergencyService.reset();
+
       // Clear the pinHash from the profile (preserves other settings)
       const profile = await storageService.getUserProfile();
       if (profile) {
