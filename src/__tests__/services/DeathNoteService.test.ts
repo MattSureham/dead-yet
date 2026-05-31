@@ -64,14 +64,12 @@ describe('DeathNoteService', () => {
       };
       // Store as raw JSON string — simulates legacy setDeathNoteRaw or
       // old setDeathNote (which JSON.stringify's under the hood).
-      // Note: Date objects from JSON.parse come back as strings.
       (storageService.getDeathNoteRaw as jest.Mock).mockResolvedValue(
         JSON.stringify(mockNote),
       );
       const result = await deathNoteService.getDeathNote();
-      // Dates are serialised as ISO strings through JSON
-      const expected = { ...mockNote, updatedAt: mockNote.updatedAt.toISOString() };
-      expect(result).toEqual(expected);
+      // Dates are revived to Date objects via safeJsonParse
+      expect(result).toEqual(mockNote);
     });
   });
 

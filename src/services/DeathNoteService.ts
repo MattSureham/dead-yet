@@ -2,6 +2,7 @@ import { DeathNote, AddressInfo, FinancialAccount, Pet } from '../models/types';
 import { storageService } from './StorageService';
 import { cryptoService } from './CryptoService';
 import { v4 as uuidv4 } from 'uuid';
+import { safeJsonParse } from '../utils/json';
 
 class DeathNoteService {
   private static instance: DeathNoteService;
@@ -29,7 +30,7 @@ class DeathNoteService {
         if (!pinHash) return null; // Can't decrypt without PIN
         try {
           const plaintext = await cryptoService.decrypt(raw, pinHash);
-          return JSON.parse(plaintext) as DeathNote;
+          return safeJsonParse<DeathNote>(plaintext);
         } catch (err) {
           console.error('[DeathNoteService] Failed to decrypt death note:', err);
           return null;
@@ -37,7 +38,7 @@ class DeathNoteService {
       }
       // Legacy plaintext JSON stored via setDeathNoteRaw (or direct AsyncStorage)
       try {
-        return JSON.parse(raw) as DeathNote;
+        return safeJsonParse<DeathNote>(raw);
       } catch {
         return null;
       }

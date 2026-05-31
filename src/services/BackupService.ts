@@ -45,6 +45,7 @@
 import { UserProfile, EmergencyContact, DeathNote, ActivityLog } from '../models/types';
 import { storageService } from './StorageService';
 import { cryptoService } from './CryptoService';
+import { safeJsonParse } from '../utils/json';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -173,7 +174,7 @@ class BackupService {
     // 2. Parse and validate the payload
     let payload: BackupPayload;
     try {
-      payload = JSON.parse(plaintext) as BackupPayload;
+      payload = safeJsonParse<BackupPayload>(plaintext);
     } catch {
       throw new Error('Backup payload is not valid JSON');
     }
@@ -271,7 +272,7 @@ class BackupService {
 
     // Deep-clone and strip the pinHash so it can't be extracted from the
     // backup file and brute-forced offline.
-    const safe: UserProfile = JSON.parse(JSON.stringify(profile));
+    const safe: UserProfile = safeJsonParse<UserProfile>(JSON.stringify(profile));
     if (safe.settings?.pinHash) {
       delete safe.settings.pinHash;
     }
@@ -293,12 +294,12 @@ class BackupService {
       if (cryptoService.isEncrypted(raw)) {
         // Decrypt to get plaintext for the backup
         const plaintext = await cryptoService.decrypt(raw, pinHash);
-        return JSON.parse(plaintext) as EmergencyContact[];
+        return safeJsonParse<EmergencyContact[]>(plaintext);
       }
 
       // Legacy plaintext JSON
       try {
-        return JSON.parse(raw) as EmergencyContact[];
+        return safeJsonParse<EmergencyContact[]>(raw);
       } catch {
         return [];
       }
@@ -322,11 +323,11 @@ class BackupService {
     if (raw) {
       if (cryptoService.isEncrypted(raw)) {
         const plaintext = await cryptoService.decrypt(raw, pinHash);
-        return JSON.parse(plaintext) as DeathNote;
+        return safeJsonParse<DeathNote>(plaintext);
       }
 
       try {
-        return JSON.parse(raw) as DeathNote;
+        return safeJsonParse<DeathNote>(raw);
       } catch {
         return null;
       }
@@ -349,7 +350,7 @@ class BackupService {
     const existingPinHash = current?.settings?.pinHash;
 
     // Deep-clone so we don't mutate the input
-    const safe: UserProfile = JSON.parse(JSON.stringify(profile));
+    const safe: UserProfile = safeJsonParse<UserProfile>(JSON.stringify(profile));
 
     // Remove any pinHash that may have snuck into the backup
     if (safe.settings?.pinHash) {

@@ -1,12 +1,13 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { STORAGE_KEYS } from '../constants/theme';
 import { UserProfile, EmergencyContact, DeathNote, ActivityLog } from '../models/types';
+import { safeJsonParse } from '../utils/json';
 
 class StorageService {
   async get<T>(key: string): Promise<T | null> {
     try {
       const value = await AsyncStorage.getItem(key);
-      return value ? (JSON.parse(value) as T) : null;
+      return value ? (safeJsonParse(value) as T) : null;
     } catch (error) {
       console.error(`StorageService get error for key ${key}:`, error);
       return null;
