@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { ActivityLog } from '../models/types';
 import { activityTrackingService } from '../services/ActivityTrackingService';
 
@@ -21,29 +21,34 @@ export function ActivityProvider({ children }: { children: ReactNode }) {
   const [appUsage, setAppUsage] = useState<{ appName: string; totalMinutes: number }[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    refresh();
+  const refresh = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const [logs, today, weekly, usage] = await Promise.all([
+        activityTrackingService.getRecentLogs(50),
+        activityTrackingService.getTodayScreenTime(),
+        activityTrackingService.getWeeklyScreenTime(),
+        activityTrackingService.getAppUsage(),
+      ]);
+      setRecentLogs(logs);
+      setTodayScreenTime(today);
+      setWeeklyScreenTime(weekly);
+      setAppUsage(usage);
+    } catch (err) {
+      console.error('[ActivityContext] refresh failed:', err);
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
 
-  const refresh = async () => {
-    setIsLoading(true);
-    const [logs, today, weekly, usage] = await Promise.all([
-      activityTrackingService.getRecentLogs(50),
-      activityTrackingService.getTodayScreenTime(),
-      activityTrackingService.getWeeklyScreenTime(),
-      activityTrackingService.getAppUsage(),
-    ]);
-    setRecentLogs(logs);
-    setTodayScreenTime(today);
-    setWeeklyScreenTime(weekly);
-    setAppUsage(usage);
-    setIsLoading(false);
-  };
-
-  const manualCheckIn = async () => {
+  const manualCheckIn = useCallback(async () => {
     await activityTrackingService.manualCheckIn();
     await refresh();
-  };
+  }, [refresh]);
+
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
 
   return (
     <ActivityContext.Provider
