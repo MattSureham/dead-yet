@@ -145,7 +145,7 @@ class AliveMonitorService {
     const newStatus: AliveStatus = {
       state,
       lastActivity,
-      silenceHours: lastActivity ? Math.round(silenceHours * 10) / 10 : 0,
+      silenceHours: Math.round(silenceHours * 10) / 10,
       nextCheckAt,
       confidence,
     };
