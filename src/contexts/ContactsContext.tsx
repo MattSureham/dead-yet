@@ -3,6 +3,7 @@ import { EmergencyContact } from '../models/types';
 import { storageService } from '../services/StorageService';
 import { cryptoService } from '../services/CryptoService';
 import { useSecurity } from './SecurityContext';
+import { safeJsonParse } from '../utils/json';
 import { v4 as uuidv4 } from 'uuid';
 
 interface ContactsContextType {
@@ -31,7 +32,7 @@ export function ContactsProvider({ children }: { children: ReactNode }) {
         if (pinHash) {
           try {
             const plaintext = await cryptoService.decrypt(raw, pinHash);
-            setContacts(JSON.parse(plaintext) as EmergencyContact[]);
+            setContacts(safeJsonParse<EmergencyContact[]>(plaintext));
           } catch (err) {
             console.error('[ContactsContext] Failed to decrypt contacts:', err);
             setContacts([]);
@@ -41,7 +42,7 @@ export function ContactsProvider({ children }: { children: ReactNode }) {
       } else {
         // Legacy plaintext JSON
         try {
-          setContacts(JSON.parse(raw) as EmergencyContact[]);
+          setContacts(safeJsonParse<EmergencyContact[]>(raw));
         } catch {
           setContacts([]);
         }

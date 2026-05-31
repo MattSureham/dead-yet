@@ -20,7 +20,7 @@ type Props = {
 };
 
 export default function EmergencyContactsScreen({ navigation: _navigation }: Props) {
-  const { contacts, addContact, removeContact } = useContacts();
+  const { contacts, addContact, removeContact, reorderContacts } = useContacts();
   const [showAddForm, setShowAddForm] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
@@ -78,6 +78,20 @@ export default function EmergencyContactsScreen({ navigation: _navigation }: Pro
     ]);
   };
 
+  const handleMoveUp = (index: number) => {
+    if (index === 0) return;
+    const reordered = [...contacts];
+    [reordered[index - 1], reordered[index]] = [reordered[index], reordered[index - 1]];
+    reorderContacts(reordered);
+  };
+
+  const handleMoveDown = (index: number) => {
+    if (index >= contacts.length - 1) return;
+    const reordered = [...contacts];
+    [reordered[index], reordered[index + 1]] = [reordered[index + 1], reordered[index]];
+    reorderContacts(reordered);
+  };
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.header}>
@@ -106,6 +120,22 @@ export default function EmergencyContactsScreen({ navigation: _navigation }: Pro
                 {contact.relationship && (
                   <Text style={styles.contactRelationship}>{contact.relationship}</Text>
                 )}
+              </View>
+              <View style={styles.reorderButtons}>
+                <TouchableOpacity
+                  onPress={() => handleMoveUp(index)}
+                  disabled={index === 0}
+                  style={[styles.reorderBtn, index === 0 && styles.reorderBtnDisabled]}
+                >
+                  <Text style={[styles.reorderText, index === 0 && styles.reorderTextDisabled]}>▲</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => handleMoveDown(index)}
+                  disabled={index === contacts.length - 1}
+                  style={[styles.reorderBtn, index === contacts.length - 1 && styles.reorderBtnDisabled]}
+                >
+                  <Text style={[styles.reorderText, index === contacts.length - 1 && styles.reorderTextDisabled]}>▼</Text>
+                </TouchableOpacity>
               </View>
               <TouchableOpacity onPress={() => handleDelete(contact)} style={styles.deleteButton}>
                 <Text style={styles.deleteText}>×</Text>
@@ -264,6 +294,26 @@ const styles = StyleSheet.create({
   deleteText: {
     fontSize: 24,
     color: COLORS.danger,
+  },
+  reorderButtons: {
+    flexDirection: 'column',
+    marginRight: SPACING.sm,
+  },
+  reorderBtn: {
+    width: 28,
+    height: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  reorderBtnDisabled: {
+    opacity: 0.3,
+  },
+  reorderText: {
+    fontSize: 12,
+    color: COLORS.primary,
+  },
+  reorderTextDisabled: {
+    color: COLORS.textMuted,
   },
   addForm: {
     backgroundColor: COLORS.surface,
