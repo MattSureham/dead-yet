@@ -130,11 +130,37 @@ class DeathNoteService {
     await this.saveDeathNote(note, pinHash);
   }
 
-  private async getOrCreateNote(pinHash?: string): Promise<DeathNote> {
-    let note = await this.getDeathNote(pinHash);
-    if (!note) {
-      note = await this.createEmptyDeathNote(pinHash);
+  /**
+   * Check whether a death note blob exists in storage, regardless of
+   * whether we can currently decrypt it.
+   */
+  async hasDeathNote(): Promise<boolean> {
+    const raw = await storageService.getDeathNoteRaw();
+    if (!raw) return false;
+    // If it's encrypted we still consider it "existing" even if we can't read it
+    if (cryptoService.isEncrypted(raw)) return true;
+    try {
+      JSON.parse(raw);
+      return true;
+    } catch {
+      return false;
     }
+  }
+
+  private async getOrCreateNote(pinHash?: string): Promise<DeathNote> {
+    const exists = await this.hasDeathNote();
+    const note = await this.getDeathNote(pinHash);
+
+    if (!note) {
+      if (exists) {
+        throw new Error(
+          'Failed to decrypt death note. The stored data may be encrypted with a different PIN, ' +
+          'or the data may be corrupted. To prevent data loss, the existing note has not been modified.',
+        );
+      }
+      return this.createEmptyDeathNote(pinHash);
+    }
+
     return note;
   }
 

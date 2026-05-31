@@ -6,6 +6,8 @@ import { useSecurity } from './SecurityContext';
 interface DeathNoteContextType {
   deathNote: DeathNote | null;
   isLoading: boolean;
+  lastError: string | null;
+  clearError: () => void;
   updateAddress: (address: AddressInfo) => Promise<void>;
   addFinancialAccount: (account: Omit<FinancialAccount, 'id'>) => Promise<void>;
   updateFinancialAccount: (account: FinancialAccount) => Promise<void>;
@@ -22,65 +24,102 @@ const DeathNoteContext = createContext<DeathNoteContextType | undefined>(undefin
 export function DeathNoteProvider({ children }: { children: ReactNode }) {
   const [deathNote, setDeathNote] = useState<DeathNote | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [lastError, setLastError] = useState<string | null>(null);
   const { getPinHash } = useSecurity();
+
+  const clearError = () => setLastError(null);
 
   const loadDeathNote = useCallback(async () => {
     const pinHash = getPinHash() ?? undefined;
-    const note = await deathNoteService.getDeathNote(pinHash);
-    setDeathNote(note);
-    setIsLoading(false);
+    try {
+      const note = await deathNoteService.getDeathNote(pinHash);
+      setDeathNote(note);
+    } catch (err) {
+      console.error('[DeathNoteContext] load failed:', err);
+      setLastError('Failed to load Final Wishes & Instructions.');
+    } finally {
+      setIsLoading(false);
+    }
   }, [getPinHash]);
 
   useEffect(() => {
     loadDeathNote();
   }, [loadDeathNote]);
 
+  const withErrorHandling = async (operation: () => Promise<void>, label: string) => {
+    try {
+      clearError();
+      await operation();
+      await loadDeathNote();
+    } catch (err) {
+      console.error(`[DeathNoteContext] ${label} failed:`, err);
+      const message = err instanceof Error ? err.message : 'An unexpected error occurred.';
+      setLastError(message);
+    }
+  };
+
   const updateAddress = async (address: AddressInfo) => {
     const pinHash = getPinHash() ?? undefined;
-    await deathNoteService.updateAddress(address, pinHash);
-    await loadDeathNote();
+    await withErrorHandling(
+      () => deathNoteService.updateAddress(address, pinHash),
+      'updateAddress',
+    );
   };
 
   const addFinancialAccount = async (account: Omit<FinancialAccount, 'id'>) => {
     const pinHash = getPinHash() ?? undefined;
-    await deathNoteService.addFinancialAccount(account, pinHash);
-    await loadDeathNote();
+    await withErrorHandling(
+      () => deathNoteService.addFinancialAccount(account, pinHash),
+      'addFinancialAccount',
+    );
   };
 
   const updateFinancialAccount = async (account: FinancialAccount) => {
     const pinHash = getPinHash() ?? undefined;
-    await deathNoteService.updateFinancialAccount(account, pinHash);
-    await loadDeathNote();
+    await withErrorHandling(
+      () => deathNoteService.updateFinancialAccount(account, pinHash),
+      'updateFinancialAccount',
+    );
   };
 
   const removeFinancialAccount = async (id: string) => {
     const pinHash = getPinHash() ?? undefined;
-    await deathNoteService.removeFinancialAccount(id, pinHash);
-    await loadDeathNote();
+    await withErrorHandling(
+      () => deathNoteService.removeFinancialAccount(id, pinHash),
+      'removeFinancialAccount',
+    );
   };
 
   const addPet = async (pet: Omit<Pet, 'id'>) => {
     const pinHash = getPinHash() ?? undefined;
-    await deathNoteService.addPet(pet, pinHash);
-    await loadDeathNote();
+    await withErrorHandling(
+      () => deathNoteService.addPet(pet, pinHash),
+      'addPet',
+    );
   };
 
   const updatePet = async (pet: Pet) => {
     const pinHash = getPinHash() ?? undefined;
-    await deathNoteService.updatePet(pet, pinHash);
-    await loadDeathNote();
+    await withErrorHandling(
+      () => deathNoteService.updatePet(pet, pinHash),
+      'updatePet',
+    );
   };
 
   const removePet = async (id: string) => {
     const pinHash = getPinHash() ?? undefined;
-    await deathNoteService.removePet(id, pinHash);
-    await loadDeathNote();
+    await withErrorHandling(
+      () => deathNoteService.removePet(id, pinHash),
+      'removePet',
+    );
   };
 
   const updateOtherInfo = async (info: string) => {
     const pinHash = getPinHash() ?? undefined;
-    await deathNoteService.updateOtherInfo(info, pinHash);
-    await loadDeathNote();
+    await withErrorHandling(
+      () => deathNoteService.updateOtherInfo(info, pinHash),
+      'updateOtherInfo',
+    );
   };
 
   return (
@@ -88,6 +127,8 @@ export function DeathNoteProvider({ children }: { children: ReactNode }) {
       value={{
         deathNote,
         isLoading,
+        lastError,
+        clearError,
         updateAddress,
         addFinancialAccount,
         updateFinancialAccount,

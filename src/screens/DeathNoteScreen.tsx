@@ -12,7 +12,7 @@ import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from '../constants/theme';
 import { useDeathNote } from '../contexts/DeathNoteContext';
 
 export default function DeathNoteScreen() {
-  const { deathNote, updateAddress, addFinancialAccount, removeFinancialAccount, addPet, removePet, updateOtherInfo } = useDeathNote();
+  const { deathNote, lastError, clearError, updateAddress, addFinancialAccount, removeFinancialAccount, addPet, removePet, updateOtherInfo } = useDeathNote();
   const [showAddressForm, setShowAddressForm] = useState(false);
   const [showFinancialForm, setShowFinancialForm] = useState(false);
   const [showPetForm, setShowPetForm] = useState(false);
@@ -108,6 +108,15 @@ export default function DeathNoteScreen() {
           Important information for those left behind
         </Text>
       </View>
+
+      {lastError && (
+        <View style={styles.errorBanner}>
+          <Text style={styles.errorBannerText}>{lastError}</Text>
+          <TouchableOpacity onPress={clearError}>
+            <Text style={styles.errorDismiss}>✕</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
@@ -385,6 +394,9 @@ const styles = StyleSheet.create({
   formButtons: { flexDirection: 'row', gap: SPACING.md, marginTop: SPACING.sm },
   cancelBtn: { flex: 1, padding: SPACING.md, borderRadius: BORDER_RADIUS.md, alignItems: 'center', backgroundColor: COLORS.surfaceLight },
   cancelText: { color: COLORS.textSecondary, fontSize: FONT_SIZES.md },
+  errorBanner: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: COLORS.danger + '20', borderColor: COLORS.danger, borderWidth: 1, borderRadius: BORDER_RADIUS.md, padding: SPACING.md, marginBottom: SPACING.lg },
+  errorBannerText: { color: COLORS.danger, fontSize: FONT_SIZES.sm, flex: 1 },
+  errorDismiss: { color: COLORS.danger, fontSize: FONT_SIZES.lg, paddingLeft: SPACING.md },
   saveBtn: { flex: 1, padding: SPACING.md, borderRadius: BORDER_RADIUS.md, alignItems: 'center', backgroundColor: COLORS.primary },
   saveText: { color: COLORS.text, fontSize: FONT_SIZES.md, fontWeight: '600' },
 });
