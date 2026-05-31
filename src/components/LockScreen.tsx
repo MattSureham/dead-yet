@@ -160,8 +160,8 @@ export default function LockScreen() {
   // -------------------------------------------------------------------
 
   const handleDigit = useCallback((digit: string) => {
-    if (pin.length < 8) setPin((prev) => prev + digit);
-  }, [pin]);
+    setPin((prev) => prev.length < 8 ? prev + digit : prev);
+  }, []);
 
   const handleDelete = useCallback(() => {
     setPin((prev) => prev.slice(0, -1));
