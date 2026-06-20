@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, fireEvent } from '@testing-library/react-native';
+import { act, render, fireEvent, waitFor } from '@testing-library/react-native';
 import LockScreen from '../../components/LockScreen';
 
 const mockUnlock = jest.fn();
@@ -22,14 +22,6 @@ jest.mock('../../services/StorageService', () => ({
 }));
 
 describe('LockScreen', () => {
-  beforeAll(() => {
-    jest.useFakeTimers();
-  });
-
-  afterAll(() => {
-    jest.useRealTimers();
-  });
-
   beforeEach(() => {
     jest.clearAllMocks();
     mockUnlock.mockResolvedValue(true);
@@ -63,32 +55,42 @@ describe('LockScreen', () => {
     expect(getByText('Forgot PIN?')).toBeTruthy();
   });
 
-  it('auto-submits after entering 4 digits', () => {
+  it('auto-submits after entering 4 digits', async () => {
     const { getByText } = render(<LockScreen />);
 
-    fireEvent.press(getByText('1'));
-    fireEvent.press(getByText('2'));
-    fireEvent.press(getByText('3'));
-    fireEvent.press(getByText('4'));
+    act(() => {
+      fireEvent.press(getByText('1'));
+      fireEvent.press(getByText('2'));
+      fireEvent.press(getByText('3'));
+      fireEvent.press(getByText('4'));
+    });
 
     // Auto-submit effect fires when pin.length >= 4
-    expect(mockUnlock).toHaveBeenCalledWith('1234');
+    await waitFor(() => {
+      expect(mockUnlock).toHaveBeenCalledWith('1234');
+    });
   });
 
-  it('clears last digit on delete', () => {
+  it('clears last digit on delete', async () => {
     const { getByText } = render(<LockScreen />);
 
-    fireEvent.press(getByText('5'));
-    fireEvent.press(getByText('6'));
-    fireEvent.press(getByText('7'));
-    fireEvent.press(getByText('⌫'));
+    act(() => {
+      fireEvent.press(getByText('5'));
+      fireEvent.press(getByText('6'));
+      fireEvent.press(getByText('7'));
+      fireEvent.press(getByText('⌫'));
+    });
 
     // 2 digits remain, submit not yet triggered
     expect(mockUnlock).not.toHaveBeenCalled();
 
     // Press 2 more to reach 4-digit threshold
-    fireEvent.press(getByText('8'));
-    fireEvent.press(getByText('9'));
-    expect(mockUnlock).toHaveBeenCalledWith('5689');
+    act(() => {
+      fireEvent.press(getByText('8'));
+      fireEvent.press(getByText('9'));
+    });
+    await waitFor(() => {
+      expect(mockUnlock).toHaveBeenCalledWith('5689');
+    });
   });
 });

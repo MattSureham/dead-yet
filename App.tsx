@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { View, ActivityIndicator, StyleSheet, AppState, AppStateStatus } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -32,6 +32,10 @@ export default function App() {
       }
     }
     initialize();
+  }, []);
+
+  const handleOnboardingComplete = useCallback(() => {
+    setIsOnboardingComplete(true);
   }, []);
 
   // ---------------------------------------------------------------------------
@@ -177,16 +181,19 @@ export default function App() {
       <SafeAreaProvider>
         <SecurityProvider>
           <SecurityGate>
-          <UserProvider>
-            <ContactsProvider>
-              <DeathNoteProvider>
-                <ActivityProvider>
-                  <StatusBar style="light" />
-                  <AppNavigator isOnboardingComplete={isOnboardingComplete} />
-                </ActivityProvider>
-              </DeathNoteProvider>
-            </ContactsProvider>
-          </UserProvider>
+            <UserProvider>
+              <ContactsProvider>
+                <DeathNoteProvider>
+                  <ActivityProvider>
+                    <StatusBar style="light" />
+                    <AppNavigator
+                      isOnboardingComplete={isOnboardingComplete}
+                      onOnboardingComplete={handleOnboardingComplete}
+                    />
+                  </ActivityProvider>
+                </DeathNoteProvider>
+              </ContactsProvider>
+            </UserProvider>
           </SecurityGate>
         </SecurityProvider>
       </SafeAreaProvider>

@@ -4,6 +4,11 @@ import { storageService } from './StorageService';
 import { notificationService } from './NotificationService';
 import { deathNoteService } from './DeathNoteService';
 
+type LinkingApi = {
+  canOpenURL?: (url: string) => Promise<boolean>;
+  openURL?: (url: string) => Promise<unknown>;
+};
+
 interface CallResult {
   contactId: string;
   contactName: string;
@@ -84,24 +89,18 @@ class EmergencyService {
   }
 
   async makeCall(contact: EmergencyContact): Promise<CallResult> {
-    const telUrl = Platform.OS === 'ios'
-      ? `telprompt:${contact.phoneNumber}`
-      : `tel:${contact.phoneNumber}`;
+    const telUrl =
+      Platform.OS === 'ios' ? `telprompt:${contact.phoneNumber}` : `tel:${contact.phoneNumber}`;
 
-    try {
-      const canOpen = await Linking.canOpenURL(telUrl);
-      if (canOpen) {
-        await Linking.openURL(telUrl);
-        return {
-          contactId: contact.id,
-          contactName: contact.name,
-          success: true,
-          timestamp: new Date(),
-          method: 'call',
-        };
-      }
-    } catch (error) {
-      console.error(`[Emergency] Failed to call ${contact.name}:`, error);
+    const opened = await this.openUrlIfSupported(telUrl);
+    if (opened) {
+      return {
+        contactId: contact.id,
+        contactName: contact.name,
+        success: true,
+        timestamp: new Date(),
+        method: 'call',
+      };
     }
 
     return {
@@ -117,25 +116,11 @@ class EmergencyService {
   async sendEmergencyMessage(contact: EmergencyContact, message: string): Promise<boolean> {
     const smsUrl = `sms:${contact.phoneNumber}${Platform.OS === 'ios' ? '&' : '?'}body=${encodeURIComponent(message)}`;
 
-    try {
-      const canOpen = await Linking.canOpenURL(smsUrl);
-      if (canOpen) {
-        await Linking.openURL(smsUrl);
-        return true;
-      }
-    } catch (error) {
-      console.error(`[Emergency] Failed to send SMS to ${contact.name}:`, error);
-      // Fallback: try without body
-      try {
-        const fallbackUrl = `sms:${contact.phoneNumber}`;
-        await Linking.openURL(fallbackUrl);
-        return true;
-      } catch (fallbackErr) {
-        console.error(`[Emergency] SMS fallback also failed:`, fallbackErr);
-      }
+    if (await this.openUrlIfSupported(smsUrl)) {
+      return true;
     }
 
-    return false;
+    return this.openUrlIfSupported(`sms:${contact.phoneNumber}`);
   }
 
   /**
@@ -149,10 +134,7 @@ class EmergencyService {
    * @param contact - The emergency contact to reveal to.
    * @param pinHash - Optional PIN hash for decrypting the death note.
    */
-  async revealDeathNotesToContact(
-    contact: EmergencyContact,
-    pinHash?: string,
-  ): Promise<void> {
+  async revealDeathNotesToContact(contact: EmergencyContact, pinHash?: string): Promise<void> {
     this.currentPhase = 'revealing_notes';
 
     // Try encrypted-aware path first, fall back to legacy plaintext
@@ -236,7 +218,7 @@ class EmergencyService {
 
   async getSortedContacts(): Promise<EmergencyContact[]> {
     const contacts = await storageService.getEmergencyContacts();
-    return contacts.sort((a, b) => a.priority - b.priority);
+    return [...contacts].sort((a, b) => a.priority - b.priority);
   }
 
   async addContact(contact: EmergencyContact): Promise<void> {
@@ -282,13 +264,17 @@ class EmergencyService {
     const parts: string[] = ['FINAL WISHES & INSTRUCTIONS:\n'];
 
     if (deathNote.address) {
-      parts.push(`Address: ${deathNote.address.street}, ${deathNote.address.city}, ${deathNote.address.state} ${deathNote.address.zipCode}`);
+      parts.push(
+        `Address: ${deathNote.address.street}, ${deathNote.address.city}, ${deathNote.address.state} ${deathNote.address.zipCode}`,
+      );
     }
     if (deathNote.pets?.length) {
       parts.push(`Pets: ${deathNote.pets.map((p: Pet) => `${p.name} (${p.species})`).join(', ')}`);
     }
     if (deathNote.financialAccounts?.length) {
-      parts.push(`Financial accounts: ${deathNote.financialAccounts.map((a: FinancialAccount) => `${a.institution} - ${a.accountName}`).join(', ')}`);
+      parts.push(
+        `Financial accounts: ${deathNote.financialAccounts.map((a: FinancialAccount) => `${a.institution} - ${a.accountName}`).join(', ')}`,
+      );
     }
     if (deathNote.otherImportantInfo) {
       parts.push(`Other info: ${deathNote.otherImportantInfo}`);
@@ -305,6 +291,29 @@ class EmergencyService {
 
   private wait(ms: number): Promise<void> {
     return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  private getLinking(): LinkingApi | null {
+    return (Linking as unknown as LinkingApi | null) ?? null;
+  }
+
+  private async openUrlIfSupported(url: string): Promise<boolean> {
+    const linking = this.getLinking();
+
+    if (typeof linking?.canOpenURL !== 'function' || typeof linking.openURL !== 'function') {
+      return false;
+    }
+
+    try {
+      if (!(await linking.canOpenURL(url))) {
+        return false;
+      }
+
+      await linking.openURL(url);
+      return true;
+    } catch {
+      return false;
+    }
   }
 }
 

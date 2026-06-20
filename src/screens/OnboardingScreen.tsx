@@ -21,6 +21,7 @@ import { isValidPin, pinStrength } from '../utils/validation';
 
 type Props = {
   navigation: NativeStackNavigationProp<RootStackParamList, 'Onboarding'>;
+  onOnboardingComplete?: () => void;
 };
 
 /**
@@ -31,7 +32,7 @@ type Props = {
  * Step 2 — Set a PIN via SecurityContext so the auth state machine is properly
  *          initialised (authenticated, auto-lock active, etc.).
  */
-export default function OnboardingScreen({ navigation }: Props) {
+export default function OnboardingScreen({ navigation, onOnboardingComplete }: Props) {
   const { updateProfile } = useUser();
   const { setupPin } = useSecurity();
   const [step, setStep] = useState(0);
@@ -53,7 +54,10 @@ export default function OnboardingScreen({ navigation }: Props) {
       setStep(2);
     } else if (step === 2) {
       if (!isValidPin(pin)) {
-        Alert.alert('Weak PIN', 'Please enter a PIN that is at least 4 digits and not a simple sequence like 1234 or 1111.');
+        Alert.alert(
+          'Weak PIN',
+          'Please enter a PIN that is at least 4 digits and not a simple sequence like 1234 or 1111.',
+        );
         return;
       }
 
@@ -69,6 +73,7 @@ export default function OnboardingScreen({ navigation }: Props) {
         // stores it in the profile, and transitions to 'authenticated'.
         await setupPin(pin);
         await storageService.setOnboardingComplete(true);
+        onOnboardingComplete?.();
 
         navigation.replace('Home');
       } catch (err) {
@@ -122,7 +127,8 @@ export default function OnboardingScreen({ navigation }: Props) {
             <Text style={styles.stepLabel}>Step 2 of 2</Text>
             <Text style={styles.title}>Create a PIN</Text>
             <Text style={styles.subtitle}>
-              This PIN protects your Final Wishes &amp; Instructions. You&apos;ll need it to access them later.
+              This PIN protects your Final Wishes &amp; Instructions. You&apos;ll need it to access
+              them later.
             </Text>
             <TextInput
               style={[styles.input, pin.length > 0 && strength === 'weak' && styles.inputError]}
@@ -142,25 +148,58 @@ export default function OnboardingScreen({ navigation }: Props) {
                   <View
                     style={[
                       styles.strengthBar,
-                      { backgroundColor: strength === 'weak' ? COLORS.danger : strength === 'medium' ? COLORS.warning : COLORS.success },
+                      {
+                        backgroundColor:
+                          strength === 'weak'
+                            ? COLORS.danger
+                            : strength === 'medium'
+                              ? COLORS.warning
+                              : COLORS.success,
+                      },
                     ]}
                   />
                   <View
                     style={[
                       styles.strengthBar,
-                      { backgroundColor: strength === 'medium' ? COLORS.warning : strength === 'strong' ? COLORS.success : COLORS.surfaceLight },
+                      {
+                        backgroundColor:
+                          strength === 'medium'
+                            ? COLORS.warning
+                            : strength === 'strong'
+                              ? COLORS.success
+                              : COLORS.surfaceLight,
+                      },
                     ]}
                   />
                   <View
                     style={[
                       styles.strengthBar,
-                      { backgroundColor: strength === 'strong' ? COLORS.success : COLORS.surfaceLight },
+                      {
+                        backgroundColor:
+                          strength === 'strong' ? COLORS.success : COLORS.surfaceLight,
+                      },
                     ]}
                   />
                 </View>
                 {strength && (
-                  <Text style={[styles.strengthLabel, { color: strength === 'weak' ? COLORS.danger : strength === 'medium' ? COLORS.warning : COLORS.success }]}>
-                    {strength === 'weak' ? 'Weak PIN — avoid sequences like 1234' : strength === 'medium' ? 'Medium strength' : 'Strong PIN'}
+                  <Text
+                    style={[
+                      styles.strengthLabel,
+                      {
+                        color:
+                          strength === 'weak'
+                            ? COLORS.danger
+                            : strength === 'medium'
+                              ? COLORS.warning
+                              : COLORS.success,
+                      },
+                    ]}
+                  >
+                    {strength === 'weak'
+                      ? 'Weak PIN — avoid sequences like 1234'
+                      : strength === 'medium'
+                        ? 'Medium strength'
+                        : 'Strong PIN'}
                   </Text>
                 )}
               </View>

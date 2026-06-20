@@ -14,6 +14,53 @@ interface UserContextType {
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
+function createProfile(updates: Partial<UserProfile>): UserProfile {
+  const { settings, ...profileUpdates } = updates;
+
+  return {
+    id: uuidv4(),
+    name: '',
+    createdAt: new Date(),
+    lastActivityAt: new Date(),
+    isConfirmedAlive: true,
+    lastConfirmedAt: new Date(),
+    ...profileUpdates,
+    settings: {
+      ...DEFAULT_SETTINGS,
+      ...(settings ?? {}),
+    },
+  };
+}
+
+function mergeProfiles(
+  stored: UserProfile | null,
+  current: UserProfile | null,
+  updates: Partial<UserProfile> = {},
+): UserProfile | null {
+  const base = stored ?? current;
+  if (!base) return null;
+
+  const mergedCurrent = current
+    ? {
+        ...base,
+        ...current,
+        settings: {
+          ...base.settings,
+          ...current.settings,
+        },
+      }
+    : base;
+
+  return {
+    ...mergedCurrent,
+    ...updates,
+    settings: {
+      ...mergedCurrent.settings,
+      ...(updates.settings ?? {}),
+    },
+  };
+}
+
 export function UserProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -31,31 +78,27 @@ export function UserProvider({ children }: { children: ReactNode }) {
   };
 
   const updateProfile = async (updates: Partial<UserProfile>) => {
-    if (!profile) {
-      const newProfile: UserProfile = {
-        id: uuidv4(),
-        name: '',
-        createdAt: new Date(),
-        lastActivityAt: new Date(),
-        isConfirmedAlive: true,
-        lastConfirmedAt: new Date(),
-        settings: DEFAULT_SETTINGS,
-        ...updates,
-      };
+    const stored = await storageService.getUserProfile();
+    const updated = mergeProfiles(stored, profile, updates);
+
+    if (!updated) {
+      const newProfile = createProfile(updates);
       await storageService.setUserProfile(newProfile);
       setProfile(newProfile);
     } else {
-      const updated = { ...profile, ...updates };
       await storageService.setUserProfile(updated);
       setProfile(updated);
     }
   };
 
   const updateSettings = async (settings: Partial<UserSettings>) => {
-    if (profile) {
+    const stored = await storageService.getUserProfile();
+    const base = mergeProfiles(stored, profile);
+
+    if (base) {
       const updated = {
-        ...profile,
-        settings: { ...profile.settings, ...settings },
+        ...base,
+        settings: { ...base.settings, ...settings },
       };
       await storageService.setUserProfile(updated);
       setProfile(updated);
@@ -68,8 +111,12 @@ export function UserProvider({ children }: { children: ReactNode }) {
     if (!profile || isConfirmingRef.current) return;
     isConfirmingRef.current = true;
     try {
+      const stored = await storageService.getUserProfile();
+      const base = mergeProfiles(stored, profile);
+      if (!base) return;
+
       const updated = {
-        ...profile,
+        ...base,
         isConfirmedAlive: true,
         lastConfirmedAt: new Date(),
         lastActivityAt: new Date(),
@@ -82,7 +129,9 @@ export function UserProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <UserContext.Provider value={{ profile, isLoading, updateProfile, updateSettings, confirmAlive }}>
+    <UserContext.Provider
+      value={{ profile, isLoading, updateProfile, updateSettings, confirmAlive }}
+    >
       {children}
     </UserContext.Provider>
   );

@@ -88,9 +88,19 @@ class AliveMonitorService {
   async evaluate(): Promise<AliveStatus> {
     const profile = await storageService.getUserProfile();
 
-    const lastActivity = profile?.lastActivityAt
-      ? new Date(profile.lastActivityAt)
-      : null;
+    if (!profile) {
+      const previousState = this.currentStatus.state;
+      const fallbackStatus = this.getMissingProfileStatus();
+
+      this.currentStatus = fallbackStatus;
+      if (fallbackStatus.state !== previousState) {
+        this.notifyListeners(fallbackStatus);
+      }
+
+      return fallbackStatus;
+    }
+
+    const lastActivity = this.getLastKnownActivity(profile);
 
     // Derive thresholds from user settings (with defaults)
     const inactivityDays = profile?.settings?.inactivityThresholdDays ?? 3;
@@ -101,9 +111,7 @@ class AliveMonitorService {
     const quietThresholdHours = Math.max(1, silentThresholdHours / 2); // e.g., 36h
     const deadThresholdHours = silentThresholdHours * 2; // e.g., 144h
 
-    const silenceHours = lastActivity
-      ? Math.max(0, (Date.now() - lastActivity.getTime()) / (1000 * 60 * 60))
-      : Infinity; // No profile means never active — treat as dead
+    const silenceHours = Math.max(0, (Date.now() - lastActivity.getTime()) / (1000 * 60 * 60));
 
     // Determine state
     let state: AliveState;
@@ -114,10 +122,12 @@ class AliveMonitorService {
       confidence = 1.0 - silenceHours / quietThresholdHours;
     } else if (silenceHours < silentThresholdHours) {
       state = 'quiet';
-      confidence = 1.0 - (silenceHours - quietThresholdHours) / (silentThresholdHours - quietThresholdHours);
+      confidence =
+        1.0 - (silenceHours - quietThresholdHours) / (silentThresholdHours - quietThresholdHours);
     } else if (silenceHours < deadThresholdHours) {
       state = 'silent';
-      confidence = 1.0 - (silenceHours - silentThresholdHours) / (deadThresholdHours - silentThresholdHours);
+      confidence =
+        1.0 - (silenceHours - silentThresholdHours) / (deadThresholdHours - silentThresholdHours);
     } else {
       state = 'presumed_dead';
       confidence = 1.0; // High confidence after exceeding dead threshold
@@ -242,6 +252,36 @@ class AliveMonitorService {
         console.error('[AliveMonitorService] Listener error:', err);
       }
     }
+  }
+
+  private getMissingProfileStatus(): AliveStatus {
+    return {
+      state: 'active',
+      lastActivity: null,
+      silenceHours: 0,
+      nextCheckAt: null,
+      confidence: 0,
+    };
+  }
+
+  private getLastKnownActivity(profile: {
+    lastActivityAt?: Date | string | null;
+    lastConfirmedAt?: Date | string | null;
+    createdAt?: Date | string | null;
+  }): Date {
+    return (
+      this.toValidDate(profile.lastActivityAt) ??
+      this.toValidDate(profile.lastConfirmedAt) ??
+      this.toValidDate(profile.createdAt) ??
+      new Date()
+    );
+  }
+
+  private toValidDate(value: Date | string | null | undefined): Date | null {
+    if (!value) return null;
+
+    const date = value instanceof Date ? value : new Date(value);
+    return isNaN(date.getTime()) ? null : date;
   }
 }
 

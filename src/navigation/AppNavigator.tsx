@@ -22,9 +22,14 @@ export const navigationRef = createNavigationContainerRef<RootStackParamList>();
 interface Props {
   /** When true, skip onboarding and show Home. Checked via storageService at app init. */
   isOnboardingComplete?: boolean;
+  /** Called when the onboarding flow persists its completion flag. */
+  onOnboardingComplete?: () => void;
 }
 
-export default function AppNavigator({ isOnboardingComplete = false }: Props) {
+export default function AppNavigator({
+  isOnboardingComplete = false,
+  onOnboardingComplete,
+}: Props) {
   return (
     <NavigationContainer ref={navigationRef}>
       <Stack.Navigator
@@ -42,21 +47,15 @@ export default function AppNavigator({ isOnboardingComplete = false }: Props) {
           },
         }}
       >
-        <Stack.Screen
-          name="Onboarding"
-          component={OnboardingScreen}
-          options={{ headerShown: false }}
-        />
+        <Stack.Screen name="Onboarding" options={{ headerShown: false }}>
+          {(props) => <OnboardingScreen {...props} onOnboardingComplete={onOnboardingComplete} />}
+        </Stack.Screen>
         <Stack.Screen
           name="Home"
           component={HomeScreen}
           options={{ title: 'Dead Yet?', headerShown: false }}
         />
-        <Stack.Screen
-          name="Activity"
-          component={ActivityScreen}
-          options={{ title: 'Activity' }}
-        />
+        <Stack.Screen name="Activity" component={ActivityScreen} options={{ title: 'Activity' }} />
         <Stack.Screen
           name="EmergencyContacts"
           component={EmergencyContactsScreen}
@@ -67,11 +66,7 @@ export default function AppNavigator({ isOnboardingComplete = false }: Props) {
           component={DeathNoteScreen}
           options={{ title: 'Final Wishes & Instructions' }}
         />
-        <Stack.Screen
-          name="Settings"
-          component={SettingsScreen}
-          options={{ title: 'Settings' }}
-        />
+        <Stack.Screen name="Settings" component={SettingsScreen} options={{ title: 'Settings' }} />
       </Stack.Navigator>
     </NavigationContainer>
   );

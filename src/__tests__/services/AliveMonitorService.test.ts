@@ -99,21 +99,23 @@ describe('AliveMonitorService', () => {
       expect(status.confidence).toBe(1.0);
     });
 
-    it('returns presumed_dead when no profile exists', async () => {
+    it('returns active when no profile exists', async () => {
       (storageService.getUserProfile as jest.Mock).mockResolvedValue(null);
 
       const status = await aliveMonitorService.evaluate();
-      expect(status.state).toBe('presumed_dead');
+      expect(status.state).toBe('active');
+      expect(status.lastActivity).toBeNull();
+      expect(status.nextCheckAt).toBeNull();
     });
 
-    it('returns active when no lastActivityAt is set (treats as just now)', async () => {
+    it('returns active when no lastActivityAt is set and falls back to last confirmation', async () => {
       (storageService.getUserProfile as jest.Mock).mockResolvedValue({
         ...mockProfile,
         lastActivityAt: undefined,
       });
 
       const status = await aliveMonitorService.evaluate();
-      expect(status.state).toBe('presumed_dead');
+      expect(status.state).toBe('active');
     });
   });
 
@@ -256,8 +258,7 @@ describe('AliveMonitorService', () => {
       (storageService.getUserProfile as jest.Mock).mockResolvedValue(null);
 
       const status = await aliveMonitorService.checkIn();
-      // Without a profile, evaluate returns presumed_dead
-      expect(status.state).toBe('presumed_dead');
+      expect(status.state).toBe('active');
     });
   });
 
@@ -317,9 +318,7 @@ describe('AliveMonitorService', () => {
       await aliveMonitorService.evaluate();
 
       expect(listener).toHaveBeenCalledTimes(1);
-      expect(listener).toHaveBeenCalledWith(
-        expect.objectContaining({ state: 'quiet' }),
-      );
+      expect(listener).toHaveBeenCalledWith(expect.objectContaining({ state: 'quiet' }));
 
       unsub();
     });
@@ -463,9 +462,7 @@ describe('AliveMonitorService', () => {
     });
 
     it('handles storage service errors gracefully', async () => {
-      (storageService.getUserProfile as jest.Mock).mockRejectedValue(
-        new Error('Storage error'),
-      );
+      (storageService.getUserProfile as jest.Mock).mockRejectedValue(new Error('Storage error'));
 
       await expect(aliveMonitorService.evaluate()).rejects.toThrow('Storage error');
     });
